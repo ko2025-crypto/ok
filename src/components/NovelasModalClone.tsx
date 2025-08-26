@@ -197,8 +197,8 @@ export function NovelasModalClone({ isOpen, onClose }: NovelasModalProps) {
   const totals = calculateTotals();
 
   const generateNovelListText = () => {
-    let listText = "📚 CATÁLOGO DE NOVELAS DISPONIBLES\n";
-    listText += "TV a la Carta - Novelas Completas\n\n";
+    let listText = "📚 CATÁLOGO DE NOVELAS DISPONIBLES (CLON)\n";
+    listText += "TV a la Carta - Novelas Completas - Versión Clonada\n\n";
     listText += `💰 Precio: $${novelPricePerChapter} CUP por capítulo\n`;
     listText += `💳 Recargo transferencia: ${transferFeePercentage}%\n`;
     listText += "📱 Contacto: +5354690878\n\n";
@@ -283,7 +283,7 @@ export function NovelasModalClone({ isOpen, onClose }: NovelasModalProps) {
 
     const { cashNovelas, transferNovelas, cashTotal, transferBaseTotal, transferFee, transferTotal, grandTotal, totalCapitulos } = totals;
     
-    let message = "Me interesan los siguientes títulos:\n\n";
+    let message = "Me interesan los siguientes títulos (CLON):\n\n";
     
     // Cash novels
     if (cashNovelas.length > 0) {
@@ -334,7 +334,7 @@ export function NovelasModalClone({ isOpen, onClose }: NovelasModalProps) {
       message += `• Transferencia: $${transferTotal.toLocaleString()} CUP (${transferNovelas.length} novelas)\n`;
     }
     message += `• TOTAL A PAGAR: $${grandTotal.toLocaleString()} CUP\n\n`;
-    message += `📱 Enviado desde TV a la Carta\n`;
+    message += `📱 Enviado desde TV a la Carta (Versión Clonada)\n`;
     message += `📅 Fecha: ${new Date().toLocaleString('es-ES')}`;
 
     const encodedMessage = encodeURIComponent(message);
@@ -347,7 +347,7 @@ export function NovelasModalClone({ isOpen, onClose }: NovelasModalProps) {
   };
 
   const handleWhatsApp = () => {
-    const message = "Gracias por escribir a [TV a la Carta], se ha comunicado con el operador [Yero], Gracias por dedicarnos un momento de su tiempo hoy. ¿En qué puedo serle útil?";
+    const message = "Gracias por escribir a [TV a la Carta], se ha comunicado con el operador [Yero], Gracias por dedicarnos un momento de su tiempo hoy. ¿En qué puedo serle útil? (Versión Clonada)";
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/5354690878?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -387,7 +387,7 @@ export function NovelasModalClone({ isOpen, onClose }: NovelasModalProps) {
                 <div className="bg-pink-100 p-3 rounded-xl mr-4">
                   <Info className="h-6 w-6 text-pink-600" />
                 </div>
-                <h3 className="text-xl font-bold text-pink-900">Información Importante</h3>
+                <h3 className="text-xl font-bold text-pink-900">Información Importante (Clon)</h3>
               </div>
               
               <div className="space-y-4 text-pink-800">
@@ -445,7 +445,7 @@ export function NovelasModalClone({ isOpen, onClose }: NovelasModalProps) {
               >
                 <Download className="h-6 w-6 mr-3" />
                 <div className="text-left">
-                  <div className="text-lg">Descargar Catálogo</div>
+                  <div className="text-lg">Descargar Catálogo (Clon)</div>
                   <div className="text-sm opacity-90">Lista completa de novelas</div>
                 </div>
               </button>
