@@ -155,7 +155,7 @@ export function Home() {
             </span>
           </h1>
           <p className="text-lg md:text-xl mb-8 max-w-3xl mx-auto opacity-90">
-            Explora miles de películas, animes, series ilimitadas y mucho más. Encuentra tus favoritos y agrégalos a tu carrito.
+            Explora miles de películas, series y anime. Encuentra tus favoritos y agrégalos a tu carrito.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

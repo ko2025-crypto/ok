@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Trash2, Star, Calendar, MessageCircle, ArrowLeft, Edit3, Tv, DollarSign, CreditCard, Calculator } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { AdminContext } from '../context/AdminContext';
 import { PriceCard } from '../components/PriceCard';
 import { CheckoutModal, OrderData, CustomerInfo } from '../components/CheckoutModal';
 import { sendOrderToWhatsApp } from '../utils/whatsapp';
@@ -10,11 +9,7 @@ import { IMAGE_BASE_URL, POSTER_SIZE } from '../config/api';
 
 export function Cart() {
   const { state, removeItem, clearCart, updatePaymentType, calculateItemPrice, calculateTotalPrice, calculateTotalByPaymentType } = useCart();
-  const adminContext = React.useContext(AdminContext);
   const [showCheckoutModal, setShowCheckoutModal] = React.useState(false);
-
-  // Get current transfer fee percentage with real-time updates
-  const transferFeePercentage = adminContext?.state?.prices?.transferFeePercentage || 10;
 
   const handleCheckout = (orderData: OrderData) => {
     // Calculate totals
@@ -180,7 +175,7 @@ export function Cart() {
                             }`}
                           >
                             <CreditCard className="h-3 w-3 inline mr-1" />
-                            Transferencia (+{transferFeePercentage}%)
+                            Transferencia (+10%)
                           </button>
                         </div>
                       </div>
@@ -236,7 +231,7 @@ export function Cart() {
                         </div>
                         {item.paymentType === 'transfer' && (
                           <div className="text-xs text-orange-600 mt-1">
-                            +{transferFeePercentage}% incluido
+                            +10% incluido
                           </div>
                         )}
                       </div>
@@ -319,7 +314,7 @@ export function Cart() {
                       ${totalsByPaymentType.transfer.toLocaleString()} CUP
                     </div>
                     <div className="text-sm text-orange-600">
-                      {state.items.filter(item => item.paymentType === 'transfer').length} elementos (+{transferFeePercentage}%)
+                      {state.items.filter(item => item.paymentType === 'transfer').length} elementos (+10%)
                     </div>
                   </div>
                 </div>
