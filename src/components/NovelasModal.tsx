@@ -362,7 +362,7 @@ export function NovelasModal({ isOpen, onClose }: NovelasModalProps) {
   };
 
   const handleWhatsApp = () => {
-    const message = "Gracias por escribir a [TV a la Carta], se ha comunicado con el operador [Yero], Gracias por dedicarnos un momento de su tiempo hoy. ¿En qué puedo serle útil?";
+    const message = "📚 *Solicitar novelas*\n\n¿Hay novelas que me gustaría ver en [TV a la Carta] a continuación te comento:";
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/5354690878?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
