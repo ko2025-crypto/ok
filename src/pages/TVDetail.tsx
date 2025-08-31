@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Star, Calendar, Tv, Plus, X, Play, ChevronDown } from 'lucide-react';
-import { tmdbService } from '../services/tmdb';
+import { optimizedTmdbService } from '../services/optimizedTmdb';
+import { performanceMonitor } from '../utils/optimizedPerformance';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { PriceCard } from '../components/PriceCard';
 import { CastSection } from '../components/CastSection';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { useCart } from '../context/CartContext';
 import { IMAGE_BASE_URL, BACKDROP_SIZE } from '../config/api';
@@ -41,13 +42,15 @@ export function TVDetail() {
   }, [inCart, tvId, getItemSeasons]);
 
   useEffect(() => {
-    const fetchTVData = async () => {
+    const fetchTVData = React.useCallback(async () => {
       try {
         setLoading(true);
+        performanceMonitor.startMeasure('fetch-tv-details');
+        
         const [tvData, videoData, creditsData] = await Promise.all([
-          tmdbService.getTVShowDetails(tvId),
-          tmdbService.getTVShowVideos(tvId),
-          tmdbService.getTVShowCredits(tvId)
+          optimizedTmdbService.getTVShowDetails(tvId),
+          optimizedTmdbService.getTVShowVideos(tvId),
+          optimizedTmdbService.getTVShowCredits(tvId)
         ]);
 
         setTVShow(tvData);
@@ -62,13 +65,15 @@ export function TVDetail() {
         if (trailers.length > 0) {
           setSelectedVideo(trailers[0]);
         }
+        
+        performanceMonitor.endMeasure('fetch-tv-details');
       } catch (err) {
         setError('Error al cargar los detalles de la serie.');
         console.error('Error fetching TV show details:', err);
       } finally {
         setLoading(false);
       }
-    };
+    }, [tvId]);
 
     if (tvId) {
       fetchTVData();
@@ -165,7 +170,7 @@ export function TVDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <LoadingSpinner />
+        <OptimizedLoadingSpinner size="lg" color="purple" text="Cargando detalles de la serie..." />
       </div>
     );
   }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Star, Calendar, Play, Pause } from 'lucide-react';
-import { tmdbService } from '../services/tmdb';
-import { contentSyncService } from '../services/contentSync';
+import { optimizedTmdbService } from '../services/optimizedTmdb';
+import { optimizedContentSyncService } from '../services/optimizedContentSync';
+import { performanceMonitor } from '../utils/optimizedPerformance';
 import { IMAGE_BASE_URL, BACKDROP_SIZE } from '../config/api';
 import type { Movie, TVShow, Video } from '../types/movie';
 
@@ -21,15 +22,16 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
 
   // Cargar videos para cada item
   useEffect(() => {
-    const loadVideos = async () => {
+    const loadVideos = React.useCallback(async () => {
       // First try to get cached videos
       const cachedVideos: { [key: number]: Video[] } = {};
+      performanceMonitor.startMeasure('load-hero-videos');
       
       const videoPromises = items.map(async (item) => {
         try {
           // Check cache first
           const isMovie = 'title' in item;
-          const cachedVideoData = contentSyncService?.getCachedVideos?.(item.id, isMovie ? 'movie' : 'tv');
+          const cachedVideoData = optimizedContentSyncService?.getCachedVideos?.(item.id, isMovie ? 'movie' : 'tv');
           
           if (cachedVideoData && cachedVideoData.length > 0) {
             return { id: item.id, videos: cachedVideoData };
@@ -37,8 +39,8 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
           
           // Fallback to API call
           const videoData = isMovie 
-            ? await tmdbService.getMovieVideos(item.id)
-            : await tmdbService.getTVShowVideos(item.id);
+            ? await optimizedTmdbService.getMovieVideos(item.id)
+            : await optimizedTmdbService.getTVShowVideos(item.id);
           
           const trailers = videoData.results.filter(
             video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
@@ -58,7 +60,8 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
       }, {} as { [key: number]: Video[] });
       
       setItemVideos(videosMap);
-    };
+      performanceMonitor.endMeasure('load-hero-videos');
+    }, [items]);
 
     if (items.length > 0) {
       loadVideos();
@@ -145,15 +148,15 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
 
   // Auto-refresh carousel content daily
   useEffect(() => {
-    const refreshCarousel = async () => {
+    const refreshCarousel = React.useCallback(async () => {
       try {
-        const freshContent = await tmdbService.getHeroContent();
+        const freshContent = await optimizedTmdbService.getHeroContent();
         // This would need to be passed back to parent component
         // For now, we'll rely on the parent's refresh mechanism
       } catch (error) {
         console.error('Error refreshing carousel content:', error);
       }
-    };
+    }, []);
 
     const dailyRefresh = setInterval(refreshCarousel, 24 * 60 * 60 * 1000); // 24 hours
     return () => clearInterval(dailyRefresh);
@@ -178,9 +181,9 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
   };
 
   return (
-    <div className="relative h-96 md:h-[600px] overflow-hidden group">
+    <div className="relative h-96 md:h-[600px] overflow-hidden group will-change-transform">
       {/* Background Images with Parallax Effect */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 will-change-transform">
         {items.map((item, index) => {
           const itemBackdrop = item.backdrop_path
             ? `${IMAGE_BASE_URL}/${BACKDROP_SIZE}${item.backdrop_path}`
@@ -193,7 +196,7 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
           return (
             <div
               key={item.id}
-              className={`absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out transform ${
+              className={`absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out transform will-change-transform ${
                 isActive 
                   ? 'opacity-100 scale-100' 
                   : isPrev 
@@ -238,10 +241,10 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
       </button>
 
       {/* Content with Slide Animation */}
-      <div className="relative h-full flex items-end z-10">
+      <div className="relative h-full flex items-end z-10 will-change-transform">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pb-12 w-full">
           <div className="max-w-3xl">
-            <div className={`transform transition-all duration-700 ${
+            <div className={`transform transition-all duration-700 will-change-transform ${
               isTransitioning ? 'translate-y-8 opacity-0' : 'translate-y-0 opacity-100'
             }`}>
               <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">

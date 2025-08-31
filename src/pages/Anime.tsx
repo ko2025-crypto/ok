@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Filter } from 'lucide-react';
-import { tmdbService } from '../services/tmdb';
+import { optimizedTmdbService } from '../services/optimizedTmdb';
+import { performanceMonitor } from '../utils/optimizedPerformance';
 import { MovieCard } from '../components/MovieCard';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { TVShow } from '../types/movie';
 
@@ -21,36 +22,38 @@ export function Anime() {
     top_rated: 'Mejor Valorados'
   };
 
-  const fetchAnime = async (selectedCategory: AnimeCategory, pageNum: number, append: boolean = false) => {
+  const fetchAnime = React.useCallback(async (selectedCategory: AnimeCategory, pageNum: number, append: boolean = false) => {
     try {
       if (!append) setLoading(true);
+      performanceMonitor.startMeasure(`fetch-anime-${selectedCategory}`);
       
       let response;
       switch (selectedCategory) {
         case 'top_rated':
-          response = await tmdbService.getTopRatedAnime(pageNum);
+          response = await optimizedTmdbService.getTopRatedAnime(pageNum);
           break;
         default:
-          response = await tmdbService.getAnimeFromMultipleSources(pageNum);
+          response = await optimizedTmdbService.getAnimeFromMultipleSources(pageNum);
       }
 
       // Remove duplicates to ensure fresh content
-      const uniqueResults = tmdbService.removeDuplicates(response.results);
+      const uniqueResults = optimizedTmdbService.removeDuplicates(response.results);
 
       if (append) {
-        setAnimeList(prev => tmdbService.removeDuplicates([...prev, ...uniqueResults]));
+        setAnimeList(prev => optimizedTmdbService.removeDuplicates([...prev, ...uniqueResults]));
       } else {
         setAnimeList(uniqueResults);
       }
       
       setHasMore(pageNum < response.total_pages);
+      performanceMonitor.endMeasure(`fetch-anime-${selectedCategory}`);
     } catch (err) {
       setError('Error al cargar el anime. Por favor, intenta de nuevo.');
       console.error('Error fetching anime:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -77,7 +80,7 @@ export function Anime() {
   if (loading && animeList.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <LoadingSpinner />
+        <OptimizedLoadingSpinner size="lg" color="pink" text="Cargando anime..." />
       </div>
     );
   }

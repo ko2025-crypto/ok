@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Tv, Filter } from 'lucide-react';
-import { tmdbService } from '../services/tmdb';
+import { optimizedTmdbService } from '../services/optimizedTmdb';
+import { performanceMonitor } from '../utils/optimizedPerformance';
 import { MovieCard } from '../components/MovieCard';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { TVShow } from '../types/movie';
 
@@ -21,36 +22,38 @@ export function TVShows() {
     top_rated: 'Mejor Valoradas'
   };
 
-  const fetchTVShows = async (selectedCategory: TVCategory, pageNum: number, append: boolean = false) => {
+  const fetchTVShows = React.useCallback(async (selectedCategory: TVCategory, pageNum: number, append: boolean = false) => {
     try {
       if (!append) setLoading(true);
+      performanceMonitor.startMeasure(`fetch-tv-${selectedCategory}`);
       
       let response;
       switch (selectedCategory) {
         case 'top_rated':
-          response = await tmdbService.getTopRatedTVShows(pageNum);
+          response = await optimizedTmdbService.getTopRatedTVShows(pageNum);
           break;
         default:
-          response = await tmdbService.getPopularTVShows(pageNum);
+          response = await optimizedTmdbService.getPopularTVShows(pageNum);
       }
 
       // Remove duplicates to ensure fresh content
-      const uniqueResults = tmdbService.removeDuplicates(response.results);
+      const uniqueResults = optimizedTmdbService.removeDuplicates(response.results);
 
       if (append) {
-        setTVShows(prev => tmdbService.removeDuplicates([...prev, ...uniqueResults]));
+        setTVShows(prev => optimizedTmdbService.removeDuplicates([...prev, ...uniqueResults]));
       } else {
         setTVShows(uniqueResults);
       }
       
       setHasMore(pageNum < response.total_pages);
+      performanceMonitor.endMeasure(`fetch-tv-${selectedCategory}`);
     } catch (err) {
       setError('Error al cargar las series. Por favor, intenta de nuevo.');
       console.error('Error fetching TV shows:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -77,7 +80,7 @@ export function TVShows() {
   if (loading && tvShows.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <LoadingSpinner />
+        <OptimizedLoadingSpinner size="lg" color="purple" text="Cargando series..." />
       </div>
     );
   }
@@ -92,7 +95,7 @@ export function TVShows() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 will-change-transform">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center mb-6">

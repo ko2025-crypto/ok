@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Filter } from 'lucide-react';
-import { tmdbService } from '../services/tmdb';
+import { optimizedTmdbService } from '../services/optimizedTmdb';
+import { debounce, performanceMonitor } from '../utils/optimizedPerformance';
 import { MovieCard } from '../components/MovieCard';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { Movie, TVShow } from '../types/movie';
 
@@ -27,22 +28,23 @@ export function SearchPage() {
     tv: 'Series'
   };
 
-  const performSearch = async (searchQuery: string, type: SearchType, pageNum: number, append: boolean = false) => {
+  const performSearch = React.useCallback(debounce(async (searchQuery: string, type: SearchType, pageNum: number, append: boolean = false) => {
     if (!searchQuery.trim()) return;
 
     try {
       if (!append) setLoading(true);
+      performanceMonitor.startMeasure(`search-${type}`);
       
       let response;
       switch (type) {
         case 'movie':
-          response = await tmdbService.searchMovies(searchQuery, pageNum);
+          response = await optimizedTmdbService.searchMovies(searchQuery, pageNum);
           break;
         case 'tv':
           // Buscar tanto series normales como anime
           const [tvResponse, animeResponse] = await Promise.all([
-            tmdbService.searchTVShows(searchQuery, pageNum),
-            tmdbService.searchAnime(searchQuery, pageNum)
+            optimizedTmdbService.searchTVShows(searchQuery, pageNum),
+            optimizedTmdbService.searchAnime(searchQuery, pageNum)
           ]);
           
           // Combinar resultados y eliminar duplicados
@@ -60,12 +62,12 @@ export function SearchPage() {
         default:
           // Para búsqueda general, incluir anime también
           const [multiResponse, animeMultiResponse] = await Promise.all([
-            tmdbService.searchMulti(searchQuery, pageNum),
-            tmdbService.searchAnime(searchQuery, pageNum)
+            optimizedTmdbService.searchMulti(searchQuery, pageNum),
+            optimizedTmdbService.searchAnime(searchQuery, pageNum)
           ]);
           
           const allResults = [...multiResponse.results, ...animeMultiResponse.results];
-          const uniqueAllResults = tmdbService.removeDuplicates(allResults);
+          const uniqueAllResults = optimizedTmdbService.removeDuplicates(allResults);
           
           response = {
             ...multiResponse,
@@ -75,10 +77,10 @@ export function SearchPage() {
       }
 
       // Ensure no duplicates in final results
-      const finalResults = tmdbService.removeDuplicates(response.results);
+      const finalResults = optimizedTmdbService.removeDuplicates(response.results);
 
       if (append) {
-        setResults(prev => tmdbService.removeDuplicates([...prev, ...finalResults]));
+        setResults(prev => optimizedTmdbService.removeDuplicates([...prev, ...finalResults]));
       } else {
         setResults(finalResults);
         setTotalResults(response.total_results);
@@ -86,13 +88,14 @@ export function SearchPage() {
       
       setHasMore(pageNum < response.total_pages);
       setError(null);
+      performanceMonitor.endMeasure(`search-${type}`);
     } catch (err) {
       setError('Error en la búsqueda. Por favor, intenta de nuevo.');
       console.error('Search error:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, 300), []); // 300ms debounce
 
   useEffect(() => {
     if (query) {
@@ -165,7 +168,7 @@ export function SearchPage() {
         </div>
 
         {/* Loading State */}
-        {loading && results.length === 0 && <LoadingSpinner />}
+        {loading && results.length === 0 && <OptimizedLoadingSpinner size="lg" color="blue" text="Buscando contenido..." />}
 
         {/* Error State */}
         {error && results.length === 0 && <ErrorMessage message={error} />}

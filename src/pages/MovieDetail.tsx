@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Star, Calendar, Clock, Plus, X, Play } from 'lucide-react';
-import { tmdbService } from '../services/tmdb';
+import { optimizedTmdbService } from '../services/optimizedTmdb';
+import { performanceMonitor } from '../utils/optimizedPerformance';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { PriceCard } from '../components/PriceCard';
 import { CastSection } from '../components/CastSection';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { useCart } from '../context/CartContext';
 import { IMAGE_BASE_URL, BACKDROP_SIZE } from '../config/api';
@@ -30,13 +31,15 @@ export function MovieDetail() {
                  (movie?.genres && movie.genres.some(g => g.name.toLowerCase().includes('animat')));
 
   useEffect(() => {
-    const fetchMovieData = async () => {
+    const fetchMovieData = React.useCallback(async () => {
       try {
         setLoading(true);
+        performanceMonitor.startMeasure('fetch-movie-details');
+        
         const [movieData, videoData, creditsData] = await Promise.all([
-          tmdbService.getMovieDetails(movieId),
-          tmdbService.getMovieVideos(movieId),
-          tmdbService.getMovieCredits(movieId)
+          optimizedTmdbService.getMovieDetails(movieId),
+          optimizedTmdbService.getMovieVideos(movieId),
+          optimizedTmdbService.getMovieCredits(movieId)
         ]);
 
         setMovie(movieData);
@@ -51,13 +54,15 @@ export function MovieDetail() {
         if (trailers.length > 0) {
           setSelectedVideo(trailers[0]);
         }
+        
+        performanceMonitor.endMeasure('fetch-movie-details');
       } catch (err) {
         setError('Error al cargar los detalles de la película.');
         console.error('Error fetching movie details:', err);
       } finally {
         setLoading(false);
       }
-    };
+    }, [movieId]);
 
     if (movieId) {
       fetchMovieData();
@@ -94,7 +99,7 @@ export function MovieDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <LoadingSpinner />
+        <OptimizedLoadingSpinner size="lg" color="blue" text="Cargando detalles de la película..." />
       </div>
     );
   }

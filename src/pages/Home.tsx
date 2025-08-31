@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, TrendingUp, Star, Tv, Filter, Calendar, Clock, Flame, BookOpen } from 'lucide-react';
-import { tmdbService } from '../services/tmdb';
+import { optimizedTmdbService } from '../services/optimizedTmdb';
+import { useOptimizedContentSync } from '../hooks/useOptimizedContentSync';
+import { performanceMonitor } from '../utils/optimizedPerformance';
 import { MovieCard } from '../components/MovieCard';
 import { HeroCarousel } from '../components/HeroCarousel';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { NovelasModal } from '../components/NovelasModal';
 import type { Movie, TVShow } from '../types/movie';
@@ -12,6 +14,7 @@ import type { Movie, TVShow } from '../types/movie';
 type TrendingTimeWindow = 'day' | 'week';
 
 export function Home() {
+  const { getTrendingContent, getPopularContent, isLoading: syncLoading } = useOptimizedContentSync();
   const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
   const [popularTVShows, setPopularTVShows] = useState<TVShow[]>([]);
   const [popularAnime, setPopularAnime] = useState<TVShow[]>([]);
@@ -28,58 +31,57 @@ export function Home() {
     week: 'Esta Semana'
   };
 
-  const fetchTrendingContent = async (timeWindow: TrendingTimeWindow) => {
+  const fetchTrendingContent = React.useCallback(async (timeWindow: TrendingTimeWindow) => {
     try {
-      const response = await tmdbService.getTrendingAll(timeWindow, 1);
-      const uniqueContent = tmdbService.removeDuplicates(response.results);
+      performanceMonitor.startMeasure('fetch-trending');
+      const uniqueContent = await getTrendingContent(timeWindow);
       setTrendingContent(uniqueContent.slice(0, 12));
       setLastUpdate(new Date());
+      performanceMonitor.endMeasure('fetch-trending');
     } catch (err) {
       console.error('Error fetching trending content:', err);
+      setError('Error al cargar contenido en tendencia');
     }
-  };
+  }, [getTrendingContent]);
 
-  const fetchAllContent = async () => {
+  const fetchAllContent = React.useCallback(async () => {
     try {
       setLoading(true);
+      performanceMonitor.startMeasure('fetch-all-content');
       
       // Get hero content first (no duplicates)
-      const heroContent = await tmdbService.getHeroContent();
+      const heroContent = await optimizedTmdbService.getHeroContent();
       setHeroItems(heroContent);
       
       // Get trending content
-      const trendingResponse = await tmdbService.getTrendingAll(trendingTimeWindow, 1);
-      const uniqueTrending = tmdbService.removeDuplicates(trendingResponse.results);
+      const uniqueTrending = await getTrendingContent(trendingTimeWindow);
       setTrendingContent(uniqueTrending.slice(0, 12));
       
-      // Get other content, excluding items already in hero and trending
+      // Get popular content with optimization
       const usedIds = new Set([
         ...heroContent.map(item => item.id),
         ...uniqueTrending.slice(0, 12).map(item => item.id)
       ]);
       
-      const [moviesRes, tvRes, animeRes] = await Promise.all([
-        tmdbService.getPopularMovies(1),
-        tmdbService.getPopularTVShows(1),
-        tmdbService.getAnimeFromMultipleSources(1)
-      ]);
+      const { movies, tvShows, anime } = await getPopularContent();
 
       // Filter out duplicates
-      const filteredMovies = moviesRes.results.filter(movie => !usedIds.has(movie.id)).slice(0, 8);
-      const filteredTVShows = tvRes.results.filter(show => !usedIds.has(show.id)).slice(0, 8);
-      const filteredAnime = animeRes.results.filter(anime => !usedIds.has(anime.id)).slice(0, 8);
+      const filteredMovies = movies.filter(movie => !usedIds.has(movie.id)).slice(0, 8);
+      const filteredTVShows = tvShows.filter(show => !usedIds.has(show.id)).slice(0, 8);
+      const filteredAnime = anime.filter(animeItem => !usedIds.has(animeItem.id)).slice(0, 8);
 
       setPopularMovies(filteredMovies);
       setPopularTVShows(filteredTVShows);
       setPopularAnime(filteredAnime);
       setLastUpdate(new Date());
+      performanceMonitor.endMeasure('fetch-all-content');
     } catch (err) {
       setError('Error al cargar el contenido. Por favor, intenta de nuevo.');
       console.error('Error fetching home data:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [getTrendingContent, getPopularContent, trendingTimeWindow]);
 
   useEffect(() => {
     fetchAllContent();
@@ -127,7 +129,7 @@ export function Home() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <LoadingSpinner />
+        <OptimizedLoadingSpinner size="lg" color="blue" text="Cargando contenido optimizado..." />
       </div>
     );
   }
@@ -185,7 +187,7 @@ export function Home() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Trending Content */}
-        <section className="mb-12">
+        <section className="mb-12 will-change-transform">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
               <Flame className="mr-2 h-6 w-6 text-red-500" />
@@ -224,7 +226,7 @@ export function Home() {
         </section>
 
         {/* Popular Movies */}
-        <section className="mb-12">
+        <section className="mb-12 will-change-transform">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
               <Star className="mr-2 h-6 w-6 text-yellow-500" />
@@ -246,7 +248,7 @@ export function Home() {
         </section>
 
         {/* Popular TV Shows */}
-        <section className="mb-12">
+        <section className="mb-12 will-change-transform">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
               <Tv className="mr-2 h-6 w-6 text-blue-500" />
@@ -268,7 +270,7 @@ export function Home() {
         </section>
 
         {/* Popular Anime */}
-        <section>
+        <section className="will-change-transform">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
               <span className="mr-2 text-2xl">🎌</span>
@@ -289,9 +291,10 @@ export function Home() {
           </div>
         </section>
 
-        {/* Last Update Info (Hidden from users) */}
-        <div className="hidden">
-          <p>Última actualización: {lastUpdate.toLocaleString()}</p>
+        {/* Performance Info (Hidden from users) */}
+        <div className="hidden" data-performance={JSON.stringify(performanceMonitor.getAllMetrics())}>
+          <p>Última actualización optimizada: {lastUpdate.toLocaleString()}</p>
+          <p>Sincronización: {syncLoading ? 'En progreso' : 'Completada'}</p>
         </div>
       </div>
       
