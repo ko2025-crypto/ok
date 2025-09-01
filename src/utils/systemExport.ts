@@ -3028,3 +3028,4 @@ export function getIndexCssSource(): string {
 }
 \`;
 }
+}
