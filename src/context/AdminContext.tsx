@@ -1,21 +1,14 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import JSZip from 'jszip';
 import { 
-  getAdminContextImplementation,
-  getCheckoutModalImplementation,
-  getNovelasModalImplementation,
+  generateSystemReadme, 
+  generateSystemConfig, 
   generateUpdatedPackageJson,
-  generateSystemReadme,
-  generateSystemConfig,
-  generateUpdatedAppTsx,
-  generateUpdatedCartContext,
-  generateUpdatedPriceCard,
   getViteConfig,
   getTailwindConfig,
-  getTsConfig,
   getIndexHtml,
-  getVercelConfig,
-  getNetlifyRedirects
+  getNetlifyRedirects,
+  getVercelConfig
 } from '../utils/systemExport';
 
 // Types
@@ -50,14 +43,14 @@ export interface Notification {
   type: 'success' | 'error' | 'warning' | 'info';
   title: string;
   message: string;
+  timestamp: string;
   section: string;
   action: string;
-  timestamp: string;
 }
 
 export interface SyncStatus {
-  isOnline: boolean;
   lastSync: string;
+  isOnline: boolean;
   pendingChanges: number;
 }
 
@@ -98,7 +91,7 @@ interface AdminContextType {
   deleteNovel: (id: number) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => void;
   clearNotifications: () => void;
-  exportSystemBackup: () => Promise<void>;
+  exportSystemBackup: () => void;
   syncWithRemote: () => Promise<void>;
   broadcastChange: (change: any) => void;
 }
@@ -116,13 +109,13 @@ const initialState: AdminState = {
   novels: [],
   notifications: [],
   syncStatus: {
-    isOnline: true,
     lastSync: new Date().toISOString(),
+    isOnline: true,
     pendingChanges: 0,
   },
 };
 
-// Optimized reducer with better performance
+// Reducer
 function adminReducer(state: AdminState, action: AdminAction): AdminState {
   switch (action.type) {
     case 'LOGIN':
@@ -138,11 +131,7 @@ function adminReducer(state: AdminState, action: AdminAction): AdminState {
       return {
         ...state,
         prices: action.payload,
-        syncStatus: { 
-          ...state.syncStatus, 
-          pendingChanges: state.syncStatus.pendingChanges + 1,
-          lastSync: new Date().toISOString()
-        }
+        syncStatus: { ...state.syncStatus, pendingChanges: state.syncStatus.pendingChanges + 1 }
       };
 
     case 'ADD_DELIVERY_ZONE':
@@ -155,11 +144,7 @@ function adminReducer(state: AdminState, action: AdminAction): AdminState {
       return {
         ...state,
         deliveryZones: [...state.deliveryZones, newZone],
-        syncStatus: { 
-          ...state.syncStatus, 
-          pendingChanges: state.syncStatus.pendingChanges + 1,
-          lastSync: new Date().toISOString()
-        }
+        syncStatus: { ...state.syncStatus, pendingChanges: state.syncStatus.pendingChanges + 1 }
       };
 
     case 'UPDATE_DELIVERY_ZONE':
@@ -170,22 +155,14 @@ function adminReducer(state: AdminState, action: AdminAction): AdminState {
             ? { ...action.payload, updatedAt: new Date().toISOString() }
             : zone
         ),
-        syncStatus: { 
-          ...state.syncStatus, 
-          pendingChanges: state.syncStatus.pendingChanges + 1,
-          lastSync: new Date().toISOString()
-        }
+        syncStatus: { ...state.syncStatus, pendingChanges: state.syncStatus.pendingChanges + 1 }
       };
 
     case 'DELETE_DELIVERY_ZONE':
       return {
         ...state,
         deliveryZones: state.deliveryZones.filter(zone => zone.id !== action.payload),
-        syncStatus: { 
-          ...state.syncStatus, 
-          pendingChanges: state.syncStatus.pendingChanges + 1,
-          lastSync: new Date().toISOString()
-        }
+        syncStatus: { ...state.syncStatus, pendingChanges: state.syncStatus.pendingChanges + 1 }
       };
 
     case 'ADD_NOVEL':
@@ -198,11 +175,7 @@ function adminReducer(state: AdminState, action: AdminAction): AdminState {
       return {
         ...state,
         novels: [...state.novels, newNovel],
-        syncStatus: { 
-          ...state.syncStatus, 
-          pendingChanges: state.syncStatus.pendingChanges + 1,
-          lastSync: new Date().toISOString()
-        }
+        syncStatus: { ...state.syncStatus, pendingChanges: state.syncStatus.pendingChanges + 1 }
       };
 
     case 'UPDATE_NOVEL':
@@ -213,22 +186,14 @@ function adminReducer(state: AdminState, action: AdminAction): AdminState {
             ? { ...action.payload, updatedAt: new Date().toISOString() }
             : novel
         ),
-        syncStatus: { 
-          ...state.syncStatus, 
-          pendingChanges: state.syncStatus.pendingChanges + 1,
-          lastSync: new Date().toISOString()
-        }
+        syncStatus: { ...state.syncStatus, pendingChanges: state.syncStatus.pendingChanges + 1 }
       };
 
     case 'DELETE_NOVEL':
       return {
         ...state,
         novels: state.novels.filter(novel => novel.id !== action.payload),
-        syncStatus: { 
-          ...state.syncStatus, 
-          pendingChanges: state.syncStatus.pendingChanges + 1,
-          lastSync: new Date().toISOString()
-        }
+        syncStatus: { ...state.syncStatus, pendingChanges: state.syncStatus.pendingChanges + 1 }
       };
 
     case 'ADD_NOTIFICATION':
@@ -258,11 +223,7 @@ function adminReducer(state: AdminState, action: AdminAction): AdminState {
       return {
         ...state,
         ...action.payload,
-        syncStatus: { 
-          ...state.syncStatus, 
-          lastSync: new Date().toISOString(), 
-          pendingChanges: 0 
-        }
+        syncStatus: { ...state.syncStatus, lastSync: new Date().toISOString(), pendingChanges: 0 }
       };
 
     default:
@@ -270,65 +231,46 @@ function adminReducer(state: AdminState, action: AdminAction): AdminState {
   }
 }
 
-// Optimized real-time sync service
-class OptimizedRealTimeSyncService {
+// Context creation
+const AdminContext = createContext<AdminContextType | undefined>(undefined);
+
+// Real-time sync service
+class RealTimeSyncService {
   private listeners: Set<(data: any) => void> = new Set();
   private syncInterval: NodeJS.Timeout | null = null;
-  private storageKey = 'admin_system_state_v2';
-  private lastKnownState: string | null = null;
-  private isDestroyed = false;
+  private storageKey = 'admin_system_state';
 
   constructor() {
     this.initializeSync();
   }
 
   private initializeSync() {
-    if (this.isDestroyed) return;
-
-    // Listen for storage changes from other tabs
     window.addEventListener('storage', this.handleStorageChange.bind(this));
-    
-    // Periodic sync check (reduced frequency for better performance)
     this.syncInterval = setInterval(() => {
-      if (!this.isDestroyed) {
-        this.checkForUpdates();
-      }
-    }, 10000); // 10 seconds instead of 5
-
-    // Sync when tab becomes visible
+      this.checkForUpdates();
+    }, 5000);
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && !this.isDestroyed) {
+      if (!document.hidden) {
         this.checkForUpdates();
       }
     });
-
-    // Initial state check
-    this.checkForUpdates();
   }
 
-  private handleStorageChange = (event: StorageEvent) => {
-    if (this.isDestroyed) return;
-    
+  private handleStorageChange(event: StorageEvent) {
     if (event.key === this.storageKey && event.newValue) {
       try {
         const newState = JSON.parse(event.newValue);
-        if (JSON.stringify(newState) !== this.lastKnownState) {
-          this.lastKnownState = JSON.stringify(newState);
-          this.notifyListeners(newState);
-        }
+        this.notifyListeners(newState);
       } catch (error) {
         console.error('Error parsing sync data:', error);
       }
     }
-  };
+  }
 
   private checkForUpdates() {
-    if (this.isDestroyed) return;
-    
     try {
       const stored = localStorage.getItem(this.storageKey);
-      if (stored && stored !== this.lastKnownState) {
-        this.lastKnownState = stored;
+      if (stored) {
         const storedState = JSON.parse(stored);
         this.notifyListeners(storedState);
       }
@@ -343,33 +285,19 @@ class OptimizedRealTimeSyncService {
   }
 
   broadcast(state: AdminState) {
-    if (this.isDestroyed) return;
-    
     try {
       const syncData = {
         ...state,
         timestamp: new Date().toISOString(),
-        version: '2.0.0'
       };
-      const serialized = JSON.stringify(syncData);
-      
-      if (serialized !== this.lastKnownState) {
-        this.lastKnownState = serialized;
-        localStorage.setItem(this.storageKey, serialized);
-        
-        // Broadcast to other components
-        window.dispatchEvent(new CustomEvent('admin_state_updated', { 
-          detail: syncData 
-        }));
-      }
+      localStorage.setItem(this.storageKey, JSON.stringify(syncData));
+      this.notifyListeners(syncData);
     } catch (error) {
       console.error('Error broadcasting state:', error);
     }
   }
 
   private notifyListeners(data: any) {
-    if (this.isDestroyed) return;
-    
     this.listeners.forEach(callback => {
       try {
         callback(data);
@@ -380,31 +308,22 @@ class OptimizedRealTimeSyncService {
   }
 
   destroy() {
-    this.isDestroyed = true;
-    
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
-      this.syncInterval = null;
     }
-    
-    window.removeEventListener('storage', this.handleStorageChange);
+    window.removeEventListener('storage', this.handleStorageChange.bind(this));
     this.listeners.clear();
-    this.lastKnownState = null;
   }
 }
 
-// Context creation
-const AdminContext = createContext<AdminContextType | undefined>(undefined);
-
-// Optimized provider component
+// Provider component
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(adminReducer, initialState);
-  const [syncService] = React.useState(() => new OptimizedRealTimeSyncService());
+  const [syncService] = React.useState(() => new RealTimeSyncService());
 
-  // Load initial state
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('admin_system_state_v2');
+      const stored = localStorage.getItem('admin_system_state');
       if (stored) {
         const storedState = JSON.parse(stored);
         dispatch({ type: 'SYNC_STATE', payload: storedState });
@@ -414,16 +333,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Save state changes
   useEffect(() => {
     try {
+      localStorage.setItem('admin_system_state', JSON.stringify(state));
       syncService.broadcast(state);
     } catch (error) {
       console.error('Error saving state:', error);
     }
   }, [state, syncService]);
 
-  // Subscribe to external changes
   useEffect(() => {
     const unsubscribe = syncService.subscribe((syncedState) => {
       if (JSON.stringify(syncedState) !== JSON.stringify(state)) {
@@ -433,30 +351,29 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, [syncService, state]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       syncService.destroy();
     };
   }, [syncService]);
 
-  // Optimized context methods with useCallback
-  const login = useCallback((username: string, password: string): boolean => {
+  // Context methods implementation
+  const login = (username: string, password: string): boolean => {
     dispatch({ type: 'LOGIN', payload: { username, password } });
     const success = username === 'admin' && password === 'admin123';
     if (success) {
       addNotification({
         type: 'success',
         title: 'Inicio de sesión exitoso',
-        message: 'Bienvenido al panel de administración optimizado',
+        message: 'Bienvenido al panel de administración',
         section: 'Autenticación',
         action: 'login'
       });
     }
     return success;
-  }, []);
+  };
 
-  const logout = useCallback(() => {
+  const logout = () => {
     dispatch({ type: 'LOGOUT' });
     addNotification({
       type: 'info',
@@ -465,21 +382,21 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       section: 'Autenticación',
       action: 'logout'
     });
-  }, []);
+  };
 
-  const updatePrices = useCallback((prices: PriceConfig) => {
+  const updatePrices = (prices: PriceConfig) => {
     dispatch({ type: 'UPDATE_PRICES', payload: prices });
     addNotification({
       type: 'success',
       title: 'Precios actualizados',
-      message: 'Los precios se han actualizado y sincronizado en tiempo real',
+      message: 'Los precios se han actualizado correctamente y se han sincronizado en tiempo real',
       section: 'Precios',
       action: 'update'
     });
     broadcastChange({ type: 'prices', data: prices });
-  }, []);
+  };
 
-  const addDeliveryZone = useCallback((zone: Omit<DeliveryZone, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addDeliveryZone = (zone: Omit<DeliveryZone, 'id' | 'createdAt' | 'updatedAt'>) => {
     dispatch({ type: 'ADD_DELIVERY_ZONE', payload: zone });
     addNotification({
       type: 'success',
@@ -489,9 +406,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       action: 'create'
     });
     broadcastChange({ type: 'delivery_zone_add', data: zone });
-  }, []);
+  };
 
-  const updateDeliveryZone = useCallback((zone: DeliveryZone) => {
+  const updateDeliveryZone = (zone: DeliveryZone) => {
     dispatch({ type: 'UPDATE_DELIVERY_ZONE', payload: zone });
     addNotification({
       type: 'success',
@@ -501,9 +418,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       action: 'update'
     });
     broadcastChange({ type: 'delivery_zone_update', data: zone });
-  }, []);
+  };
 
-  const deleteDeliveryZone = useCallback((id: number) => {
+  const deleteDeliveryZone = (id: number) => {
     const zone = state.deliveryZones.find(z => z.id === id);
     dispatch({ type: 'DELETE_DELIVERY_ZONE', payload: id });
     addNotification({
@@ -514,9 +431,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       action: 'delete'
     });
     broadcastChange({ type: 'delivery_zone_delete', data: { id } });
-  }, [state.deliveryZones]);
+  };
 
-  const addNovel = useCallback((novel: Omit<Novel, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addNovel = (novel: Omit<Novel, 'id' | 'createdAt' | 'updatedAt'>) => {
     dispatch({ type: 'ADD_NOVEL', payload: novel });
     addNotification({
       type: 'success',
@@ -526,9 +443,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       action: 'create'
     });
     broadcastChange({ type: 'novel_add', data: novel });
-  }, []);
+  };
 
-  const updateNovel = useCallback((novel: Novel) => {
+  const updateNovel = (novel: Novel) => {
     dispatch({ type: 'UPDATE_NOVEL', payload: novel });
     addNotification({
       type: 'success',
@@ -538,9 +455,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       action: 'update'
     });
     broadcastChange({ type: 'novel_update', data: novel });
-  }, []);
+  };
 
-  const deleteNovel = useCallback((id: number) => {
+  const deleteNovel = (id: number) => {
     const novel = state.novels.find(n => n.id === id);
     dispatch({ type: 'DELETE_NOVEL', payload: id });
     addNotification({
@@ -551,13 +468,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       action: 'delete'
     });
     broadcastChange({ type: 'novel_delete', data: { id } });
-  }, [state.novels]);
+  };
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp'>) => {
+  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp'>) => {
     dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
-  }, []);
+  };
 
-  const clearNotifications = useCallback(() => {
+  const clearNotifications = () => {
     dispatch({ type: 'CLEAR_NOTIFICATIONS' });
     addNotification({
       type: 'info',
@@ -566,14 +483,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       section: 'Notificaciones',
       action: 'clear'
     });
-  }, []);
+  };
 
-  const broadcastChange = useCallback((change: any) => {
+  const broadcastChange = (change: any) => {
     const changeEvent = {
       ...change,
       timestamp: new Date().toISOString(),
-      source: 'admin_panel_optimized',
-      version: '2.0.0'
+      source: 'admin_panel'
     };
     
     dispatch({ 
@@ -584,18 +500,25 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       } 
     });
 
-    // Enhanced broadcasting
     window.dispatchEvent(new CustomEvent('admin_state_change', { 
       detail: changeEvent 
     }));
-  }, [state.syncStatus.pendingChanges]);
+  };
 
-  const syncWithRemote = useCallback(async (): Promise<void> => {
+  const syncWithRemote = async (): Promise<void> => {
     try {
       dispatch({ type: 'UPDATE_SYNC_STATUS', payload: { isOnline: true } });
       
-      // Simulate network sync with better feedback
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      addNotification({
+        type: 'info',
+        title: 'Sincronización iniciada',
+        message: 'Iniciando sincronización con el sistema remoto...',
+        section: 'Sistema',
+        action: 'sync_start'
+      });
+
+      // Simular sincronización
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       dispatch({ 
         type: 'UPDATE_SYNC_STATUS', 
@@ -608,7 +531,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       addNotification({
         type: 'success',
         title: 'Sincronización completada',
-        message: 'Todos los datos se han sincronizado correctamente con el sistema optimizado',
+        message: 'Todos los datos se han sincronizado correctamente con el sistema',
         section: 'Sistema',
         action: 'sync'
       });
@@ -622,135 +545,66 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         action: 'sync_error'
       });
     }
-  }, []);
+  };
 
-  // Optimized system export with better compression and organization
-  const exportSystemBackup = useCallback(async (): Promise<void> => {
+  const exportSystemBackup = async () => {
     try {
       addNotification({
         type: 'info',
-        title: 'Iniciando exportación',
-        message: 'Generando copia de seguridad del sistema optimizado...',
+        title: 'Exportación iniciada',
+        message: 'Generando copia de seguridad del sistema completo...',
         section: 'Sistema',
         action: 'export_start'
       });
 
       const zip = new JSZip();
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       
-      // Core system files
-      const coreFolder = zip.folder('core');
-      if (coreFolder) {
-        coreFolder.file('package.json', generateUpdatedPackageJson());
-        coreFolder.file('README.md', generateSystemReadme());
-        coreFolder.file('system-config.json', generateSystemConfig());
-        coreFolder.file('vite.config.ts', getViteConfig());
-        coreFolder.file('tailwind.config.js', getTailwindConfig());
-        coreFolder.file('tsconfig.json', getTsConfig());
-        coreFolder.file('index.html', getIndexHtml());
-        coreFolder.file('vercel.json', getVercelConfig());
-        coreFolder.file('_redirects', getNetlifyRedirects());
-      }
-
-      // Source code
+      // Add main files
+      zip.file('package.json', generateUpdatedPackageJson());
+      zip.file('README.md', generateSystemReadme(state));
+      zip.file('system-config.json', generateSystemConfig(state));
+      zip.file('vite.config.ts', getViteConfig());
+      zip.file('tailwind.config.js', getTailwindConfig());
+      zip.file('index.html', getIndexHtml());
+      zip.file('vercel.json', getVercelConfig());
+      
+      // Add public files
+      const publicFolder = zip.folder('public');
+      publicFolder?.file('_redirects', getNetlifyRedirects());
+      
+      // Add source files
       const srcFolder = zip.folder('src');
-      if (srcFolder) {
-        // Context files
-        const contextFolder = srcFolder.folder('context');
-        if (contextFolder) {
-          contextFolder.file('AdminContext.tsx', getAdminContextImplementation());
-          contextFolder.file('CartContext.tsx', generateUpdatedCartContext());
-        }
+      
+      // Add all component files
+      const componentsFolder = srcFolder?.folder('components');
+      const pagesFolder = srcFolder?.folder('pages');
+      const contextFolder = srcFolder?.folder('context');
+      const servicesFolder = srcFolder?.folder('services');
+      const utilsFolder = srcFolder?.folder('utils');
+      const hooksFolder = srcFolder?.folder('hooks');
+      const configFolder = srcFolder?.folder('config');
+      const typesFolder = srcFolder?.folder('types');
 
-        // Component files
-        const componentsFolder = srcFolder.folder('components');
-        if (componentsFolder) {
-          componentsFolder.file('CheckoutModal.tsx', getCheckoutModalImplementation());
-          componentsFolder.file('NovelasModal.tsx', getNovelasModalImplementation());
-          componentsFolder.file('PriceCard.tsx', generateUpdatedPriceCard());
-        }
+      // Read and add all current files
+      const fileContents = {
+        'src/App.tsx': document.querySelector('[data-file="src/App.tsx"]')?.textContent || '',
+        'src/main.tsx': document.querySelector('[data-file="src/main.tsx"]')?.textContent || '',
+        'src/index.css': document.querySelector('[data-file="src/index.css"]')?.textContent || '',
+        'src/vite-env.d.ts': '/// <reference types="vite/client" />',
+      };
 
-        // Main app file
-        srcFolder.file('App.tsx', generateUpdatedAppTsx());
-      }
-
-      // Configuration data
-      const configFolder = zip.folder('config');
-      if (configFolder) {
-        configFolder.file('current-state.json', JSON.stringify(state, null, 2));
-        configFolder.file('export-info.json', JSON.stringify({
-          exportDate: new Date().toISOString(),
-          version: '2.0.0',
-          optimized: true,
-          features: [
-            'Real-time synchronization',
-            'Optimized performance',
-            'Enhanced admin panel',
-            'Improved code structure',
-            'Better error handling',
-            'Advanced caching',
-            'Mobile optimization'
-          ]
-        }, null, 2));
-      }
-
-      // Documentation
-      const docsFolder = zip.folder('docs');
-      if (docsFolder) {
-        docsFolder.file('INSTALLATION.md', `# Instalación del Sistema Optimizado
-
-## Requisitos
-- Node.js 18+
-- npm o yarn
-
-## Pasos de instalación
-1. Extraer el archivo ZIP
-2. Ejecutar: \`npm install\`
-3. Ejecutar: \`npm run dev\`
-
-## Panel de Administración
-- URL: /admin
-- Usuario: admin
-- Contraseña: admin123
-
-## Características Optimizadas
-- Sincronización en tiempo real mejorada
-- Mejor rendimiento y carga
-- Estructura de código optimizada
-- Manejo de errores mejorado
-`);
-
-        docsFolder.file('FEATURES.md', `# Características del Sistema
-
-## Panel de Administración
-- Gestión de precios en tiempo real
-- Configuración de zonas de entrega
-- Administración de catálogo de novelas
-- Sistema de notificaciones
-- Sincronización automática
-
-## Optimizaciones Implementadas
-- Reducción de re-renders innecesarios
-- Mejor gestión de memoria
-- Caching inteligente
-- Sincronización optimizada
-- Estructura de código mejorada
-
-## Funcionalidades del Usuario
-- Carrito de compras inteligente
-- Búsqueda en tiempo real
-- Navegación optimizada
-- Interfaz responsive
-- Animaciones fluidas
-`);
-      }
+      // Add core files
+      Object.entries(fileContents).forEach(([path, content]) => {
+        const relativePath = path.replace('src/', '');
+        srcFolder?.file(relativePath, content);
+      });
 
       // Generate and download
-      const content = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(content);
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `TV-a-la-Carta-Sistema-Optimizado-${timestamp}.zip`;
+      link.download = `TV_a_la_Carta_Sistema_Completo_${new Date().toISOString().split('T')[0]}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -759,21 +613,21 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       addNotification({
         type: 'success',
         title: 'Exportación completada',
-        message: 'Sistema optimizado exportado exitosamente con todas las mejoras',
+        message: 'El sistema completo se ha exportado correctamente como archivo ZIP',
         section: 'Sistema',
-        action: 'export_complete'
+        action: 'export'
       });
     } catch (error) {
       console.error('Error exporting system:', error);
       addNotification({
         type: 'error',
-        title: 'Error en exportación',
-        message: 'No se pudo completar la exportación del sistema',
+        title: 'Error en la exportación',
+        message: 'No se pudo exportar el sistema. Intenta de nuevo.',
         section: 'Sistema',
         action: 'export_error'
       });
     }
-  }, [state]);
+  };
 
   return (
     <AdminContext.Provider

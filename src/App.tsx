@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { AdminProvider } from './context/AdminContext';
-import { memoryManager, performanceMonitor } from './utils/optimizedPerformance';
 import { Header } from './components/Header';
 import { Home } from './pages/Home';
 import { Movies } from './pages/Movies';
@@ -15,25 +14,11 @@ import { Cart } from './pages/Cart';
 import { AdminPanel } from './pages/AdminPanel';
 
 function App() {
-  // Performance monitoring
-  React.useEffect(() => {
-    performanceMonitor.startMeasure('app-initialization');
-    
-    const cleanup = () => {
-      performanceMonitor.endMeasure('app-initialization');
-      memoryManager.cleanup();
-    };
-
-    return cleanup;
-  }, []);
-
   // Detectar refresh y redirigir a la página principal
   React.useEffect(() => {
     const handleBeforeUnload = () => {
       // Marcar que la página se está recargando
       sessionStorage.setItem('pageRefreshed', 'true');
-      // Cleanup optimizado
-      memoryManager.cleanup();
     };
 
     const handleLoad = () => {
@@ -66,7 +51,7 @@ function App() {
     };
   }, []);
 
-  // Sistema anti-zoom optimizado
+  // Deshabilitar zoom con teclado y gestos
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Deshabilitar Ctrl/Cmd + Plus/Minus/0 para zoom
@@ -76,29 +61,29 @@ function App() {
       }
     };
 
-    const handleWheel = React.useCallback((e: WheelEvent) => {
+    const handleWheel = (e: WheelEvent) => {
       // Deshabilitar Ctrl/Cmd + scroll para zoom
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         return false;
       }
-    }, []);
+    };
 
-    const handleTouchStart = React.useCallback((e: TouchEvent) => {
+    const handleTouchStart = (e: TouchEvent) => {
       // Deshabilitar pinch-to-zoom en dispositivos táctiles
       if (e.touches.length > 1) {
         e.preventDefault();
         return false;
       }
-    }, []);
+    };
 
-    const handleTouchMove = React.useCallback((e: TouchEvent) => {
+    const handleTouchMove = (e: TouchEvent) => {
       // Deshabilitar pinch-to-zoom en dispositivos táctiles
       if (e.touches.length > 1) {
         e.preventDefault();
         return false;
       }
-    }, []);
+    };
 
     // Agregar event listeners
     document.addEventListener('keydown', handleKeyDown, { passive: false });
@@ -118,13 +103,13 @@ function App() {
     <AdminProvider>
       <CartProvider>
         <Router>
-          <div className="min-h-screen bg-gray-50 hardware-accelerated">
+          <div className="min-h-screen bg-gray-50">
             <Routes>
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/*" element={
                 <>
                   <Header />
-                  <main className="will-change-transform">
+                  <main>
                     <Routes>
                       <Route path="/" element={<Home />} />
                       <Route path="/movies" element={<Movies />} />

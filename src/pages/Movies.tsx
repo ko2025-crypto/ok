@@ -1,21 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Film, Filter } from 'lucide-react';
-import { optimizedTmdbService } from '../services/optimizedTmdb';
-import { performanceMonitor } from '../utils/optimizedPerformance';
+import { useOptimizedContent } from '../hooks/useOptimizedContent';
+import { tmdbService } from '../services/tmdb';
 import { MovieCard } from '../components/MovieCard';
-import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { Movie } from '../types/movie';
 
 type MovieCategory = 'popular' | 'top_rated' | 'upcoming';
 
 export function Movies() {
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<MovieCategory>('popular');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
 
   const categoryTitles = {
     popular: 'Populares',
@@ -23,68 +18,30 @@ export function Movies() {
     upcoming: 'Próximos Estrenos'
   };
 
-  const fetchMovies = React.useCallback(async (selectedCategory: MovieCategory, pageNum: number, append: boolean = false) => {
-    try {
-      if (!append) setLoading(true);
-      performanceMonitor.startMeasure(`fetch-movies-${selectedCategory}`);
-      
-      let response;
-      switch (selectedCategory) {
-        case 'top_rated':
-          response = await optimizedTmdbService.getTopRatedMovies(pageNum);
-          break;
-        case 'upcoming':
-          response = await optimizedTmdbService.getUpcomingMovies(pageNum);
-          break;
-        default:
-          response = await optimizedTmdbService.getPopularMovies(pageNum);
-      }
-
-      // Remove duplicates to ensure fresh content
-      const uniqueResults = optimizedTmdbService.removeDuplicates(response.results);
-
-      if (append) {
-        setMovies(prev => optimizedTmdbService.removeDuplicates([...prev, ...uniqueResults]));
-      } else {
-        setMovies(uniqueResults);
-      }
-      
-      setHasMore(pageNum < response.total_pages);
-      performanceMonitor.endMeasure(`fetch-movies-${selectedCategory}`);
-    } catch (err) {
-      setError('Error al cargar las películas. Por favor, intenta de nuevo.');
-      console.error('Error fetching movies:', err);
-    } finally {
-      setLoading(false);
+  const getFetchFunction = (selectedCategory: MovieCategory) => {
+    switch (selectedCategory) {
+      case 'top_rated':
+        return tmdbService.getTopRatedMovies.bind(tmdbService);
+      case 'upcoming':
+        return tmdbService.getUpcomingMovies.bind(tmdbService);
+      default:
+        return tmdbService.getPopularMovies.bind(tmdbService);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    setPage(1);
-    fetchMovies(category, 1, false);
-    
-    // Auto-refresh content daily
-    const dailyRefresh = setInterval(() => {
-      fetchMovies(category, 1, false);
-    }, 24 * 60 * 60 * 1000); // 24 hours
-    
-    return () => clearInterval(dailyRefresh);
-  }, [category]);
+  const { data: movies, loading, error, hasMore, loadMore } = useOptimizedContent(
+    getFetchFunction(category),
+    [category]
+  );
 
   const handleCategoryChange = (newCategory: MovieCategory) => {
     setCategory(newCategory);
   };
 
-  const loadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchMovies(category, nextPage, true);
-  };
-
   if (loading && movies.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <OptimizedLoadingSpinner size="lg" color="blue" text="Cargando películas..." />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -99,7 +56,7 @@ export function Movies() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 will-change-transform">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center mb-6">
@@ -129,7 +86,7 @@ export function Movies() {
         </div>
 
         {/* Movies Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8 will-change-transform">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
           {movies.map((movie) => (
             <MovieCard key={`${movie.id}-${category}`} item={movie} type="movie" />
           ))}
@@ -141,7 +98,7 @@ export function Movies() {
             <button
               onClick={loadMore}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 will-change-transform"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-8 py-3 rounded-lg font-medium transition-colors"
             >
               {loading ? 'Cargando...' : 'Cargar más películas'}
             </button>

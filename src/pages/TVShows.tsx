@@ -1,86 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Tv, Filter } from 'lucide-react';
-import { optimizedTmdbService } from '../services/optimizedTmdb';
-import { performanceMonitor } from '../utils/optimizedPerformance';
+import { useOptimizedContent } from '../hooks/useOptimizedContent';
+import { tmdbService } from '../services/tmdb';
 import { MovieCard } from '../components/MovieCard';
-import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { TVShow } from '../types/movie';
 
 type TVCategory = 'popular' | 'top_rated';
 
 export function TVShows() {
-  const [tvShows, setTVShows] = useState<TVShow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<TVCategory>('popular');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
 
   const categoryTitles = {
     popular: 'Populares',
     top_rated: 'Mejor Valoradas'
   };
 
-  const fetchTVShows = React.useCallback(async (selectedCategory: TVCategory, pageNum: number, append: boolean = false) => {
-    try {
-      if (!append) setLoading(true);
-      performanceMonitor.startMeasure(`fetch-tv-${selectedCategory}`);
-      
-      let response;
-      switch (selectedCategory) {
-        case 'top_rated':
-          response = await optimizedTmdbService.getTopRatedTVShows(pageNum);
-          break;
-        default:
-          response = await optimizedTmdbService.getPopularTVShows(pageNum);
-      }
-
-      // Remove duplicates to ensure fresh content
-      const uniqueResults = optimizedTmdbService.removeDuplicates(response.results);
-
-      if (append) {
-        setTVShows(prev => optimizedTmdbService.removeDuplicates([...prev, ...uniqueResults]));
-      } else {
-        setTVShows(uniqueResults);
-      }
-      
-      setHasMore(pageNum < response.total_pages);
-      performanceMonitor.endMeasure(`fetch-tv-${selectedCategory}`);
-    } catch (err) {
-      setError('Error al cargar las series. Por favor, intenta de nuevo.');
-      console.error('Error fetching TV shows:', err);
-    } finally {
-      setLoading(false);
+  const getFetchFunction = (selectedCategory: TVCategory) => {
+    switch (selectedCategory) {
+      case 'top_rated':
+        return tmdbService.getTopRatedTVShows.bind(tmdbService);
+      default:
+        return tmdbService.getPopularTVShows.bind(tmdbService);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    setPage(1);
-    fetchTVShows(category, 1, false);
-    
-    // Auto-refresh content daily
-    const dailyRefresh = setInterval(() => {
-      fetchTVShows(category, 1, false);
-    }, 24 * 60 * 60 * 1000); // 24 hours
-    
-    return () => clearInterval(dailyRefresh);
-  }, [category]);
+  const { data: tvShows, loading, error, hasMore, loadMore } = useOptimizedContent(
+    getFetchFunction(category),
+    [category]
+  );
 
   const handleCategoryChange = (newCategory: TVCategory) => {
     setCategory(newCategory);
   };
 
-  const loadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchTVShows(category, nextPage, true);
-  };
-
   if (loading && tvShows.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <OptimizedLoadingSpinner size="lg" color="purple" text="Cargando series..." />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -95,7 +53,7 @@ export function TVShows() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 will-change-transform">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center mb-6">

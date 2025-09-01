@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Calendar, Plus, Check } from 'lucide-react';
-import { IMAGE_BASE_URL, POSTER_SIZE } from '../config/api';
+import { OptimizedImage } from './OptimizedImage';
 import { useCart } from '../context/CartContext';
 import { CartAnimation } from './CartAnimation';
+import { IMAGE_BASE_URL, POSTER_SIZE } from '../config/api';
 import type { Movie, TVShow, CartItem } from '../types/movie';
 
 interface MovieCardProps {
@@ -52,10 +53,11 @@ export function MovieCard({ item, type }: MovieCardProps) {
     <div className="group relative bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-105">
       <Link to={`/${type}/${item.id}`}>
         <div className="relative overflow-hidden">
-          <img
+          <OptimizedImage
             src={posterUrl}
             alt={title}
-            className="w-full h-80 object-cover group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-80 group-hover:scale-110 transition-transform duration-300"
+            lazy={true}
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
           

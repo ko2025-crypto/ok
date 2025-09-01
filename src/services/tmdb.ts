@@ -1,18 +1,10 @@
 import { BASE_URL, API_OPTIONS } from '../config/api';
+import { apiService } from './api';
 import type { Movie, TVShow, MovieDetails, TVShowDetails, Video, APIResponse, Genre, Cast, CastMember } from '../types/movie';
 
 class TMDBService {
-  private async fetchData<T>(endpoint: string): Promise<T> {
-    try {
-      const response = await fetch(`${BASE_URL}${endpoint}`, API_OPTIONS);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
+  private async fetchData<T>(endpoint: string, useCache: boolean = true): Promise<T> {
+    return apiService.fetchWithCache<T>(endpoint, useCache);
   }
 
   // Enhanced video fetching with better filtering
@@ -52,15 +44,15 @@ class TMDBService {
 
   // Movies
   async getPopularMovies(page: number = 1): Promise<APIResponse<Movie>> {
-    return this.fetchData(`/movie/popular?language=es-ES&page=${page}`);
+    return this.fetchData(`/movie/popular?language=es-ES&page=${page}`, page === 1);
   }
 
   async getTopRatedMovies(page: number = 1): Promise<APIResponse<Movie>> {
-    return this.fetchData(`/movie/top_rated?language=es-ES&page=${page}`);
+    return this.fetchData(`/movie/top_rated?language=es-ES&page=${page}`, page === 1);
   }
 
   async getUpcomingMovies(page: number = 1): Promise<APIResponse<Movie>> {
-    return this.fetchData(`/movie/upcoming?language=es-ES&page=${page}`);
+    return this.fetchData(`/movie/upcoming?language=es-ES&page=${page}`, page === 1);
   }
 
   async searchMovies(query: string, page: number = 1): Promise<APIResponse<Movie>> {
@@ -69,7 +61,7 @@ class TMDBService {
   }
 
   async getMovieDetails(id: number): Promise<MovieDetails> {
-    return this.fetchData(`/movie/${id}?language=es-ES`);
+    return this.fetchData(`/movie/${id}?language=es-ES`, true);
   }
 
   async getMovieVideos(id: number): Promise<{ results: Video[] }> {
@@ -77,16 +69,16 @@ class TMDBService {
   }
 
   async getMovieCredits(id: number): Promise<Cast> {
-    return this.fetchData(`/movie/${id}/credits?language=es-ES`);
+    return this.fetchData(`/movie/${id}/credits?language=es-ES`, true);
   }
 
   // TV Shows
   async getPopularTVShows(page: number = 1): Promise<APIResponse<TVShow>> {
-    return this.fetchData(`/tv/popular?language=es-ES&page=${page}`);
+    return this.fetchData(`/tv/popular?language=es-ES&page=${page}`, page === 1);
   }
 
   async getTopRatedTVShows(page: number = 1): Promise<APIResponse<TVShow>> {
-    return this.fetchData(`/tv/top_rated?language=es-ES&page=${page}`);
+    return this.fetchData(`/tv/top_rated?language=es-ES&page=${page}`, page === 1);
   }
 
   async searchTVShows(query: string, page: number = 1): Promise<APIResponse<TVShow>> {
@@ -95,7 +87,7 @@ class TMDBService {
   }
 
   async getTVShowDetails(id: number): Promise<TVShowDetails> {
-    return this.fetchData(`/tv/${id}?language=es-ES`);
+    return this.fetchData(`/tv/${id}?language=es-ES`, true);
   }
 
   async getTVShowVideos(id: number): Promise<{ results: Video[] }> {
@@ -103,16 +95,16 @@ class TMDBService {
   }
 
   async getTVShowCredits(id: number): Promise<Cast> {
-    return this.fetchData(`/tv/${id}/credits?language=es-ES`);
+    return this.fetchData(`/tv/${id}/credits?language=es-ES`, true);
   }
 
   // Anime (using discover with Japanese origin)
   async getPopularAnime(page: number = 1): Promise<APIResponse<TVShow>> {
-    return this.fetchData(`/discover/tv?with_origin_country=JP&with_genres=16&language=es-ES&page=${page}&sort_by=popularity.desc&include_adult=false`);
+    return this.fetchData(`/discover/tv?with_origin_country=JP&with_genres=16&language=es-ES&page=${page}&sort_by=popularity.desc&include_adult=false`, page === 1);
   }
 
   async getTopRatedAnime(page: number = 1): Promise<APIResponse<TVShow>> {
-    return this.fetchData(`/discover/tv?with_origin_country=JP&with_genres=16&language=es-ES&page=${page}&sort_by=vote_average.desc&vote_count.gte=100&include_adult=false`);
+    return this.fetchData(`/discover/tv?with_origin_country=JP&with_genres=16&language=es-ES&page=${page}&sort_by=vote_average.desc&vote_count.gte=100&include_adult=false`, page === 1);
   }
 
   async searchAnime(query: string, page: number = 1): Promise<APIResponse<TVShow>> {
@@ -124,9 +116,9 @@ class TMDBService {
   async getAnimeFromMultipleSources(page: number = 1): Promise<APIResponse<TVShow>> {
     try {
       const [japaneseAnime, animationGenre, koreanAnimation] = await Promise.all([
-        this.fetchData<APIResponse<TVShow>>(`/discover/tv?with_origin_country=JP&with_genres=16&language=es-ES&page=${page}&sort_by=popularity.desc&include_adult=false`),
-        this.fetchData<APIResponse<TVShow>>(`/discover/tv?with_genres=16&language=es-ES&page=${page}&sort_by=popularity.desc&include_adult=false`),
-        this.fetchData<APIResponse<TVShow>>(`/discover/tv?with_origin_country=KR&with_genres=16&language=es-ES&page=${page}&sort_by=popularity.desc&include_adult=false`)
+        this.fetchData<APIResponse<TVShow>>(`/discover/tv?with_origin_country=JP&with_genres=16&language=es-ES&page=${page}&sort_by=popularity.desc&include_adult=false`, page === 1),
+        this.fetchData<APIResponse<TVShow>>(`/discover/tv?with_genres=16&language=es-ES&page=${page}&sort_by=popularity.desc&include_adult=false`, page === 1),
+        this.fetchData<APIResponse<TVShow>>(`/discover/tv?with_origin_country=KR&with_genres=16&language=es-ES&page=${page}&sort_by=popularity.desc&include_adult=false`, page === 1)
       ]);
 
       // Combine and remove duplicates
@@ -153,11 +145,11 @@ class TMDBService {
 
   // Genres
   async getMovieGenres(): Promise<{ genres: Genre[] }> {
-    return this.fetchData('/genre/movie/list?language=es-ES');
+    return this.fetchData('/genre/movie/list?language=es-ES', true);
   }
 
   async getTVGenres(): Promise<{ genres: Genre[] }> {
-    return this.fetchData('/genre/tv/list?language=es-ES');
+    return this.fetchData('/genre/tv/list?language=es-ES', true);
   }
 
   // Multi search
@@ -168,15 +160,15 @@ class TMDBService {
 
   // Trending content - synchronized with TMDB
   async getTrendingAll(timeWindow: 'day' | 'week' = 'day', page: number = 1): Promise<APIResponse<Movie | TVShow>> {
-    return this.fetchData(`/trending/all/${timeWindow}?language=es-ES&page=${page}`);
+    return this.fetchData(`/trending/all/${timeWindow}?language=es-ES&page=${page}`, page === 1);
   }
 
   async getTrendingMovies(timeWindow: 'day' | 'week' = 'day', page: number = 1): Promise<APIResponse<Movie>> {
-    return this.fetchData(`/trending/movie/${timeWindow}?language=es-ES&page=${page}`);
+    return this.fetchData(`/trending/movie/${timeWindow}?language=es-ES&page=${page}`, page === 1);
   }
 
   async getTrendingTV(timeWindow: 'day' | 'week' = 'day', page: number = 1): Promise<APIResponse<TVShow>> {
-    return this.fetchData(`/trending/tv/${timeWindow}?language=es-ES&page=${page}`);
+    return this.fetchData(`/trending/tv/${timeWindow}?language=es-ES&page=${page}`, page === 1);
   }
 
   // Enhanced content discovery methods
@@ -282,6 +274,19 @@ class TMDBService {
     }
     
     return videoMap;
+  }
+
+  // Clear API cache
+  clearCache(): void {
+    apiService.clearCache();
+  }
+
+  // Get cache statistics
+  getCacheStats(): { size: number; items: { key: string; age: number }[] } {
+    return {
+      size: apiService.getCacheSize(),
+      items: apiService.getCacheInfo()
+    };
   }
 
   // Enhanced sync method for better content freshness

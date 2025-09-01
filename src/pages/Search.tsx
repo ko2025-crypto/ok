@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Filter } from 'lucide-react';
-import { optimizedTmdbService } from '../services/optimizedTmdb';
-import { debounce, performanceMonitor } from '../utils/optimizedPerformance';
+import { tmdbService } from '../services/tmdb';
+import { performanceOptimizer } from '../utils/performance';
 import { MovieCard } from '../components/MovieCard';
-import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { Movie, TVShow } from '../types/movie';
 
@@ -22,29 +22,34 @@ export function SearchPage() {
 
   const query = searchParams.get('q') || '';
 
+  // Debounced search function
+  const debouncedSearch = React.useMemo(
+    () => performanceOptimizer.debounce(performSearch, 300),
+    []
+  );
+
   const searchTypeLabels = {
     all: 'Todo',
     movie: 'Películas',
     tv: 'Series'
   };
 
-  const performSearch = React.useCallback(debounce(async (searchQuery: string, type: SearchType, pageNum: number, append: boolean = false) => {
+  const performSearch = async (searchQuery: string, type: SearchType, pageNum: number, append: boolean = false) => {
     if (!searchQuery.trim()) return;
 
     try {
       if (!append) setLoading(true);
-      performanceMonitor.startMeasure(`search-${type}`);
       
       let response;
       switch (type) {
         case 'movie':
-          response = await optimizedTmdbService.searchMovies(searchQuery, pageNum);
+          response = await tmdbService.searchMovies(searchQuery, pageNum);
           break;
         case 'tv':
           // Buscar tanto series normales como anime
           const [tvResponse, animeResponse] = await Promise.all([
-            optimizedTmdbService.searchTVShows(searchQuery, pageNum),
-            optimizedTmdbService.searchAnime(searchQuery, pageNum)
+            tmdbService.searchTVShows(searchQuery, pageNum),
+            tmdbService.searchAnime(searchQuery, pageNum)
           ]);
           
           // Combinar resultados y eliminar duplicados
@@ -62,12 +67,12 @@ export function SearchPage() {
         default:
           // Para búsqueda general, incluir anime también
           const [multiResponse, animeMultiResponse] = await Promise.all([
-            optimizedTmdbService.searchMulti(searchQuery, pageNum),
-            optimizedTmdbService.searchAnime(searchQuery, pageNum)
+            tmdbService.searchMulti(searchQuery, pageNum),
+            tmdbService.searchAnime(searchQuery, pageNum)
           ]);
           
           const allResults = [...multiResponse.results, ...animeMultiResponse.results];
-          const uniqueAllResults = optimizedTmdbService.removeDuplicates(allResults);
+          const uniqueAllResults = tmdbService.removeDuplicates(allResults);
           
           response = {
             ...multiResponse,
@@ -77,10 +82,10 @@ export function SearchPage() {
       }
 
       // Ensure no duplicates in final results
-      const finalResults = optimizedTmdbService.removeDuplicates(response.results);
+      const finalResults = tmdbService.removeDuplicates(response.results);
 
       if (append) {
-        setResults(prev => optimizedTmdbService.removeDuplicates([...prev, ...finalResults]));
+        setResults(prev => tmdbService.removeDuplicates([...prev, ...finalResults]));
       } else {
         setResults(finalResults);
         setTotalResults(response.total_results);
@@ -88,21 +93,19 @@ export function SearchPage() {
       
       setHasMore(pageNum < response.total_pages);
       setError(null);
-      performanceMonitor.endMeasure(`search-${type}`);
     } catch (err) {
       setError('Error en la búsqueda. Por favor, intenta de nuevo.');
       console.error('Search error:', err);
     } finally {
       setLoading(false);
     }
-  }, 300), []); // 300ms debounce
+  };
 
   useEffect(() => {
     if (query) {
-      setPage(1);
-      performSearch(query, searchType, 1, false);
+      debouncedSearch(query, searchType, 1, false);
     }
-  }, [query, searchType]);
+  }, [query, searchType, debouncedSearch]);
 
   const handleTypeChange = (newType: SearchType) => {
     setSearchType(newType);
@@ -168,7 +171,7 @@ export function SearchPage() {
         </div>
 
         {/* Loading State */}
-        {loading && results.length === 0 && <OptimizedLoadingSpinner size="lg" color="blue" text="Buscando contenido..." />}
+        {loading && results.length === 0 && <LoadingSpinner />}
 
         {/* Error State */}
         {error && results.length === 0 && <ErrorMessage message={error} />}

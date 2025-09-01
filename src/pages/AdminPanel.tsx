@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, DollarSign, MapPin, BookOpen, Bell, Download, Upload, FolderSync as Sync, LogOut, Eye, EyeOff, User, Lock, Save, Plus, Edit, Trash2, Check, X, AlertCircle, Home, Activity, Database, Shield, Clock, Wifi, WifiOff } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
+import { usePerformance } from '../hooks/usePerformance';
+import { tmdbService } from '../services/tmdb';
 import type { PriceConfig, DeliveryZone, Novel } from '../context/AdminContext';
 
 export function AdminPanel() {
@@ -21,6 +23,7 @@ export function AdminPanel() {
     syncWithRemote
   } = useAdmin();
 
+  const { metrics, isOptimized, optimizePerformance } = usePerformance();
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [activeSection, setActiveSection] = useState<'dashboard' | 'prices' | 'delivery' | 'novels' | 'notifications' | 'system'>('dashboard');
@@ -30,6 +33,33 @@ export function AdminPanel() {
   const [editingDeliveryZone, setEditingDeliveryZone] = useState<DeliveryZone | null>(null);
   const [editingNovel, setEditingNovel] = useState<Novel | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleOptimizeSystem = async () => {
+    try {
+      // Clear API cache
+      tmdbService.clearCache();
+      
+      // Optimize performance
+      optimizePerformance();
+      
+      // Add notification
+      addNotification({
+        type: 'success',
+        title: 'Sistema optimizado',
+        message: 'Se ha optimizado el rendimiento del sistema y limpiado la caché',
+        section: 'Sistema',
+        action: 'optimize'
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Error en optimización',
+        message: 'No se pudo optimizar el sistema completamente',
+        section: 'Sistema',
+        action: 'optimize_error'
+      });
+    }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,6 +262,16 @@ export function AdminPanel() {
             </div>
             <div className="text-lg font-bold text-purple-600">
               {state.notifications.length}
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Rendimiento</span>
+              <Activity className="h-5 w-5 text-indigo-500" />
+            </div>
+            <div className="text-lg font-bold text-indigo-600">
+              {metrics.memoryUsage.toFixed(1)} MB
             </div>
           </div>
         </div>
@@ -767,6 +807,42 @@ export function AdminPanel() {
               <div className="text-sm opacity-90">Actualizar datos remotos</div>
             </div>
           </button>
+          
+          <button
+            onClick={handleOptimizeSystem}
+            className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+          >
+            <Activity className="h-6 w-6 mr-3" />
+            <div className="text-left">
+              <div className="text-lg">Optimizar Sistema</div>
+              <div className="text-sm opacity-90">Limpiar caché y optimizar</div>
+            </div>
+          </button>
+          
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-200">
+            <div className="flex items-center mb-4">
+              <Activity className="h-6 w-6 text-indigo-600 mr-3" />
+              <div className="text-left">
+                <div className="text-lg font-semibold text-indigo-900">Métricas de Rendimiento</div>
+                <div className="text-sm text-indigo-700">Estado actual del sistema</div>
+              </div>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-indigo-700">Memoria en uso:</span>
+                <span className="font-medium text-indigo-900">{metrics.memoryUsage.toFixed(1)} MB</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-indigo-700">Tiempo de carga:</span>
+                <span className="font-medium text-indigo-900">{metrics.loadTime.toFixed(0)} ms</span>
+              </div>
+              {isOptimized && (
+                <div className="mt-2 p-2 bg-green-100 rounded-lg border border-green-200">
+                  <span className="text-green-700 text-xs font-medium">✅ Sistema optimizado recientemente</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -814,6 +890,10 @@ export function AdminPanel() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Notificaciones:</span>
                   <span className="font-medium">{state.notifications.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Caché API:</span>
+                  <span className="font-medium">{tmdbService.getCacheStats().size} elementos</span>
                 </div>
               </div>
             </div>

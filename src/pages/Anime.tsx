@@ -1,86 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Filter } from 'lucide-react';
-import { optimizedTmdbService } from '../services/optimizedTmdb';
-import { performanceMonitor } from '../utils/optimizedPerformance';
+import { useOptimizedContent } from '../hooks/useOptimizedContent';
+import { tmdbService } from '../services/tmdb';
 import { MovieCard } from '../components/MovieCard';
-import { OptimizedLoadingSpinner } from '../components/OptimizedLoadingSpinner';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { TVShow } from '../types/movie';
 
 type AnimeCategory = 'popular' | 'top_rated';
 
 export function Anime() {
-  const [animeList, setAnimeList] = useState<TVShow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<AnimeCategory>('popular');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
 
   const categoryTitles = {
     popular: 'Populares',
     top_rated: 'Mejor Valorados'
   };
 
-  const fetchAnime = React.useCallback(async (selectedCategory: AnimeCategory, pageNum: number, append: boolean = false) => {
-    try {
-      if (!append) setLoading(true);
-      performanceMonitor.startMeasure(`fetch-anime-${selectedCategory}`);
-      
-      let response;
-      switch (selectedCategory) {
-        case 'top_rated':
-          response = await optimizedTmdbService.getTopRatedAnime(pageNum);
-          break;
-        default:
-          response = await optimizedTmdbService.getAnimeFromMultipleSources(pageNum);
-      }
-
-      // Remove duplicates to ensure fresh content
-      const uniqueResults = optimizedTmdbService.removeDuplicates(response.results);
-
-      if (append) {
-        setAnimeList(prev => optimizedTmdbService.removeDuplicates([...prev, ...uniqueResults]));
-      } else {
-        setAnimeList(uniqueResults);
-      }
-      
-      setHasMore(pageNum < response.total_pages);
-      performanceMonitor.endMeasure(`fetch-anime-${selectedCategory}`);
-    } catch (err) {
-      setError('Error al cargar el anime. Por favor, intenta de nuevo.');
-      console.error('Error fetching anime:', err);
-    } finally {
-      setLoading(false);
+  const getFetchFunction = (selectedCategory: AnimeCategory) => {
+    switch (selectedCategory) {
+      case 'top_rated':
+        return tmdbService.getTopRatedAnime.bind(tmdbService);
+      default:
+        return tmdbService.getAnimeFromMultipleSources.bind(tmdbService);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    setPage(1);
-    fetchAnime(category, 1, false);
-    
-    // Auto-refresh content daily
-    const dailyRefresh = setInterval(() => {
-      fetchAnime(category, 1, false);
-    }, 24 * 60 * 60 * 1000); // 24 hours
-    
-    return () => clearInterval(dailyRefresh);
-  }, [category]);
+  const { data: animeList, loading, error, hasMore, loadMore } = useOptimizedContent(
+    getFetchFunction(category),
+    [category]
+  );
 
   const handleCategoryChange = (newCategory: AnimeCategory) => {
     setCategory(newCategory);
   };
 
-  const loadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchAnime(category, nextPage, true);
-  };
-
   if (loading && animeList.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <OptimizedLoadingSpinner size="lg" color="pink" text="Cargando anime..." />
+        <LoadingSpinner />
       </div>
     );
   }
