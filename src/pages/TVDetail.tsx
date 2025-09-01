@@ -340,6 +340,42 @@ export function TVDetail() {
               </div>
               
               <div className="p-6">
+              {/* Episode Warning for High Episode Count */}
+              {showEpisodeWarning && (
+                <div className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border-2 border-yellow-300">
+                  <div className="flex items-start">
+                    <div className="bg-yellow-100 p-2 rounded-lg mr-3 flex-shrink-0">
+                      <span className="text-lg">⚠️</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-yellow-900 mb-2">Información Importante sobre Episodios</h4>
+                      <div className="text-sm text-yellow-800 space-y-2">
+                        <p className="font-semibold">
+                          📺 Esta serie tiene temporadas con más de 50 episodios
+                        </p>
+                        <p>
+                          💰 <strong>Política de precios:</strong> Hasta 50 episodios se contempla como una temporada completa por ${adminContext?.state?.prices?.seriesPrice || 300} CUP
+                        </p>
+                        <p>
+                          📞 <strong>Para temporadas con más de 50 episodios:</strong> Debe ponerse de acuerdo directamente con el servicio TV a la Carta para más información sobre el costo adicional
+                        </p>
+                        <div className="mt-3 p-3 bg-white rounded-lg border border-yellow-200">
+                          <p className="text-xs text-yellow-700">
+                            <strong>Contacto:</strong> +5354690878 para consultas sobre series con episodios extensos
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowEpisodeWarning(false)}
+                        className="mt-3 text-xs bg-yellow-200 hover:bg-yellow-300 text-yellow-800 px-3 py-1 rounded-lg transition-colors"
+                      >
+                        Entendido
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Season Selection */}
               {hasMultipleSeasons && (
                 <div className="mb-8">
@@ -402,10 +438,20 @@ export function TVDetail() {
                             <div className="flex-1">
                               <p className="font-semibold text-gray-900">
                                 {season.name}
+                                {season.episode_count > 50 && (
+                                  <span className="ml-2 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-medium">
+                                    +50 eps - Consultar
+                                  </span>
+                                )}
                               </p>
                               <p className="text-sm text-gray-600 mt-1">
                                 {season.episode_count} episodios
                                 {season.air_date && ` • ${new Date(season.air_date).getFullYear()}`}
+                                {season.episode_count > 50 && (
+                                  <span className="block text-xs text-yellow-600 mt-1">
+                                    ⚠️ Requiere consulta adicional por episodios extensos
+                                  </span>
+                                )}
                               </p>
                             </div>
                           </label>
@@ -433,6 +479,11 @@ export function TVDetail() {
                       <p className="text-sm text-gray-600">
                         {validSeasons[0].episode_count} episodios
                         {validSeasons[0].air_date && ` • ${new Date(validSeasons[0].air_date).getFullYear()}`}
+                        {validSeasons[0].episode_count > 50 && (
+                          <span className="block text-xs text-yellow-600 mt-1">
+                            ⚠️ Más de 50 episodios - Consultar costo adicional
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>

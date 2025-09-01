@@ -43,6 +43,7 @@ export function AdminPanel() {
       optimizePerformance();
       
       // Add notification
+      const { addNotification } = useAdmin();
       addNotification({
         type: 'success',
         title: 'Sistema optimizado',
@@ -51,6 +52,7 @@ export function AdminPanel() {
         action: 'optimize'
       });
     } catch (error) {
+      const { addNotification } = useAdmin();
       addNotification({
         type: 'error',
         title: 'Error en optimización',
