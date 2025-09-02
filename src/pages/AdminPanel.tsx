@@ -43,8 +43,7 @@ export function AdminPanel() {
       optimizePerformance();
       
       // Add notification
-      const { addNotification } = useAdmin();
-      addNotification({
+      adminContext?.addNotification({
         type: 'success',
         title: 'Sistema optimizado',
         message: 'Se ha optimizado el rendimiento del sistema y limpiado la caché',
@@ -52,8 +51,7 @@ export function AdminPanel() {
         action: 'optimize'
       });
     } catch (error) {
-      const { addNotification } = useAdmin();
-      addNotification({
+      adminContext?.addNotification({
         type: 'error',
         title: 'Error en optimización',
         message: 'No se pudo optimizar el sistema completamente',

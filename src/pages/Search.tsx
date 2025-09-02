@@ -22,12 +22,6 @@ export function SearchPage() {
 
   const query = searchParams.get('q') || '';
 
-  // Debounced search function
-  const debouncedSearch = React.useMemo(
-    () => performanceOptimizer.debounce(performSearch, 300),
-    []
-  );
-
   const searchTypeLabels = {
     all: 'Todo',
     movie: 'Películas',
@@ -100,6 +94,12 @@ export function SearchPage() {
       setLoading(false);
     }
   };
+
+  // Debounced search function
+  const debouncedSearch = React.useMemo(
+    () => performanceOptimizer.debounce(performSearch, 300),
+    [performSearch]
+  );
 
   useEffect(() => {
     if (query) {

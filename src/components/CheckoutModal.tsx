@@ -411,7 +411,7 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
                         <option key={zone} value={zone}>
                           {zone === 'Por favor seleccionar su Barrio/Zona' 
                             ? zone 
-                            : `${zone.split(' > ')[2]} ${cost > 0 ? `- $${cost.toLocaleString()} CUP` : ''}`
+                            : `${zone.split(' > ')[2] || zone} ${cost > 0 ? `- $${cost.toLocaleString()} CUP` : ''}`
                           }
                         </option>
                       ))}
@@ -446,7 +446,7 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
                           </div>
                         </div>
                         <div className="text-xs text-green-600 ml-11">
-                          ✅ Zona: {deliveryZone.split(' > ')[2]}
+                          ✅ Zona: {deliveryZone.split(' > ')[2] || deliveryZone}
                         </div>
                       </div>
                     )}

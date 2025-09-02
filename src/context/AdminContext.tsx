@@ -8,17 +8,7 @@ import {
   getTailwindConfig,
   getIndexHtml,
   getNetlifyRedirects,
-  getVercelConfig,
-  getAdminContextSource,
-  getCartContextSource,
-  getCheckoutModalSource,
-  getPriceCardSource,
-  getNovelasModalSource,
-  getSystemExportSource,
-  getWhatsAppUtilsSource,
-  getAppSource,
-  getMainSource,
-  getIndexCssSource
+  getVercelConfig
 } from '../utils/systemExport';
 
 // Types
@@ -585,32 +575,65 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       // Add source files
       const srcFolder = zip.folder('src');
       
-      // Add context files with complete source code
+      // Add main source files
+      srcFolder?.file('main.tsx', getMainTsxSource());
+      srcFolder?.file('index.css', getIndexCssSource());
+      srcFolder?.file('App.tsx', getAppTsxSource());
+      srcFolder?.file('vite-env.d.ts', '/// <reference types="vite/client" />');
+      
+      // Add context files
       const contextFolder = srcFolder?.folder('context');
-      contextFolder?.file('AdminContext.tsx', getAdminContextSource());
-      contextFolder?.file('CartContext.tsx', getCartContextSource());
+      contextFolder?.file('AdminContext.tsx', getAdminContextSource(state));
+      contextFolder?.file('CartContext.tsx', getCartContextSource(state));
       
-      // Add component files with complete source code
+      // Add component files
       const componentsFolder = srcFolder?.folder('components');
-      componentsFolder?.file('CheckoutModal.tsx', getCheckoutModalSource());
-      componentsFolder?.file('PriceCard.tsx', getPriceCardSource());
-      componentsFolder?.file('NovelasModal.tsx', getNovelasModalSource());
+      componentsFolder?.file('CheckoutModal.tsx', getCheckoutModalSource(state));
+      componentsFolder?.file('PriceCard.tsx', getPriceCardSource(state));
+      componentsFolder?.file('NovelasModal.tsx', getNovelasModalSource(state));
+      componentsFolder?.file('Toast.tsx', getToastSource());
+      componentsFolder?.file('OptimizedImage.tsx', getOptimizedImageSource());
+      componentsFolder?.file('LoadingSpinner.tsx', getLoadingSpinnerSource());
+      componentsFolder?.file('ErrorMessage.tsx', getErrorMessageSource());
       
-      const pagesFolder = srcFolder?.folder('pages');
-      const servicesFolder = srcFolder?.folder('services');
+      // Add utils folder
       const utilsFolder = srcFolder?.folder('utils');
       utilsFolder?.file('systemExport.ts', getSystemExportSource());
       utilsFolder?.file('whatsapp.ts', getWhatsAppUtilsSource());
+      utilsFolder?.file('performance.ts', getPerformanceUtilsSource());
+      utilsFolder?.file('errorHandler.ts', getErrorHandlerSource());
       
-      const hooksFolder = srcFolder?.folder('hooks');
+      // Add services folder
+      const servicesFolder = srcFolder?.folder('services');
+      servicesFolder?.file('tmdb.ts', getTmdbServiceSource());
+      servicesFolder?.file('api.ts', getApiServiceSource());
+      servicesFolder?.file('contentSync.ts', getContentSyncSource());
+      
+      // Add config folder
       const configFolder = srcFolder?.folder('config');
+      configFolder?.file('api.ts', getApiConfigSource());
+      
+      // Add types folder
       const typesFolder = srcFolder?.folder('types');
-
-      // Add core files with complete source code
-      srcFolder?.file('App.tsx', getAppSource());
-      srcFolder?.file('main.tsx', getMainSource());
-      srcFolder?.file('index.css', getIndexCssSource());
-      srcFolder?.file('vite-env.d.ts', '/// <reference types="vite/client" />');
+      typesFolder?.file('movie.ts', getMovieTypesSource());
+      
+      // Add hooks folder
+      const hooksFolder = srcFolder?.folder('hooks');
+      hooksFolder?.file('useOptimizedContent.ts', getOptimizedContentHookSource());
+      hooksFolder?.file('usePerformance.ts', getPerformanceHookSource());
+      hooksFolder?.file('useContentSync.ts', getContentSyncHookSource());
+      
+      // Add pages folder
+      const pagesFolder = srcFolder?.folder('pages');
+      pagesFolder?.file('Home.tsx', getHomePageSource());
+      pagesFolder?.file('Movies.tsx', getMoviesPageSource());
+      pagesFolder?.file('TVShows.tsx', getTVShowsPageSource());
+      pagesFolder?.file('Anime.tsx', getAnimePageSource());
+      pagesFolder?.file('Search.tsx', getSearchPageSource());
+      pagesFolder?.file('Cart.tsx', getCartPageSource());
+      pagesFolder?.file('MovieDetail.tsx', getMovieDetailPageSource());
+      pagesFolder?.file('TVDetail.tsx', getTVDetailPageSource());
+      pagesFolder?.file('AdminPanel.tsx', getAdminPanelSource());
 
       // Generate and download
       const blob = await zip.generateAsync({ type: 'blob' });
