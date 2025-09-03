@@ -33,23 +33,30 @@ export function MovieDetail() {
     const fetchMovieData = async () => {
       try {
         setLoading(true);
-        const [movieData, videoData, creditsData] = await Promise.all([
+        
+        // Fetch movie details and credits first
+        const [movieData, creditsData] = await Promise.all([
           tmdbService.getMovieDetails(movieId),
-          tmdbService.getMovieVideos(movieId),
           tmdbService.getMovieCredits(movieId)
         ]);
 
         setMovie(movieData);
         setCast(creditsData.cast || []);
         
-        // Filter for trailers and teasers
-        const trailers = videoData.results.filter(
-          video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
-        );
-        setVideos(trailers);
-        
-        if (trailers.length > 0) {
-          setSelectedVideo(trailers[0]);
+        // Fetch videos separately with error handling
+        try {
+          const videoData = await tmdbService.getMovieVideos(movieId);
+          const trailers = videoData.results.filter(
+            video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
+          );
+          setVideos(trailers);
+          
+          if (trailers.length > 0) {
+            setSelectedVideo(trailers[0]);
+          }
+        } catch (videoError) {
+          console.warn(`No videos available for movie ${movieId}`);
+          setVideos([]);
         }
       } catch (err) {
         setError('Error al cargar los detalles de la película.');

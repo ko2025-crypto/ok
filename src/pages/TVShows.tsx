@@ -7,20 +7,26 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { TVShow } from '../types/movie';
 
-type TVCategory = 'popular' | 'top_rated';
+type TVCategory = 'popular' | 'top_rated' | 'airing_today' | 'on_the_air';
 
 export function TVShows() {
   const [category, setCategory] = useState<TVCategory>('popular');
 
   const categoryTitles = {
     popular: 'Populares',
-    top_rated: 'Mejor Valoradas'
+    top_rated: 'Mejor Valoradas',
+    airing_today: 'Al Aire Hoy',
+    on_the_air: 'En Emisión'
   };
 
   const getFetchFunction = (selectedCategory: TVCategory) => {
     switch (selectedCategory) {
       case 'top_rated':
         return tmdbService.getTopRatedTVShows.bind(tmdbService);
+      case 'airing_today':
+        return tmdbService.getAiringTodayTVShows.bind(tmdbService);
+      case 'on_the_air':
+        return tmdbService.getOnTheAirTVShows.bind(tmdbService);
       default:
         return tmdbService.getPopularTVShows.bind(tmdbService);
     }

@@ -49,23 +49,30 @@ export function TVDetail() {
     const fetchTVData = async () => {
       try {
         setLoading(true);
-        const [tvData, videoData, creditsData] = await Promise.all([
+        
+        // Fetch TV details and credits first
+        const [tvData, creditsData] = await Promise.all([
           tmdbService.getTVShowDetails(tvId),
-          tmdbService.getTVShowVideos(tvId),
           tmdbService.getTVShowCredits(tvId)
         ]);
 
         setTVShow(tvData);
         setCast(creditsData.cast || []);
         
-        // Filter for trailers and teasers
-        const trailers = videoData.results.filter(
-          video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
-        );
-        setVideos(trailers);
-        
-        if (trailers.length > 0) {
-          setSelectedVideo(trailers[0]);
+        // Fetch videos separately with error handling
+        try {
+          const videoData = await tmdbService.getTVShowVideos(tvId);
+          const trailers = videoData.results.filter(
+            video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
+          );
+          setVideos(trailers);
+          
+          if (trailers.length > 0) {
+            setSelectedVideo(trailers[0]);
+          }
+        } catch (videoError) {
+          console.warn(`No videos available for TV show ${tvId}`);
+          setVideos([]);
         }
       } catch (err) {
         setError('Error al cargar los detalles de la serie.');

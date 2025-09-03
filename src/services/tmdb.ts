@@ -3,39 +3,126 @@ import { apiService } from './api';
 import type { Movie, TVShow, MovieDetails, TVShowDetails, Video, APIResponse, Genre, Cast, CastMember } from '../types/movie';
 
 class TMDBService {
+  private readonly FRESH_CONTENT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for fresh content
+  private readonly DETAILS_CACHE_DURATION = 60 * 60 * 1000; // 1 hour for details
+
   private async fetchData<T>(endpoint: string, useCache: boolean = true): Promise<T> {
+    // For fresh content, use shorter cache duration
+    if (endpoint.includes('/popular') || endpoint.includes('/trending') || endpoint.includes('/now_playing')) {
+      return this.fetchWithFreshCache<T>(endpoint, useCache);
+    }
     return apiService.fetchWithCache<T>(endpoint, useCache);
+  }
+
+  private async fetchWithFreshCache<T>(endpoint: string, useCache: boolean = true): Promise<T> {
+    // Use a separate cache with shorter duration for fresh content
+    const cacheKey = `fresh_${endpoint}`;
+    
+    if (useCache) {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          const isExpired = Date.now() - timestamp > this.FRESH_CONTENT_CACHE_DURATION;
+          
+          if (!isExpired) {
+            return data;
+          }
+        } catch (error) {
+          localStorage.removeItem(cacheKey);
+        }
+      }
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}${endpoint}`, API_OPTIONS);
+      
+      if (!response.ok) {
+        if (response.status === 404 && endpoint.includes('/videos')) {
+          console.warn(`Videos not found for endpoint: ${endpoint}`);
+          return { results: [] } as T;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (useCache) {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }));
+      }
+      
+      return data;
+    } catch (error) {
+      console.error(`API Error for ${endpoint}:`, error);
+      
+      if (endpoint.includes('/videos')) {
+        return { results: [] } as T;
+      }
+      
+      // Try to return cached data even if expired
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const { data } = JSON.parse(cached);
+          console.warn(`Using expired cache for ${endpoint}`);
+          return data;
+        } catch (parseError) {
+          localStorage.removeItem(cacheKey);
+        }
+      }
+      
+      throw error;
+    }
   }
 
   // Enhanced video fetching with better filtering
   private async getVideosWithFallback(endpoint: string): Promise<{ results: Video[] }> {
     try {
-      // Try Spanish first
-      const spanishVideos = await this.fetchData<{ results: Video[] }>(`${endpoint}?language=es-ES`);
+      // Try Spanish first with error handling
+      try {
+        const spanishVideos = await this.fetchData<{ results: Video[] }>(`${endpoint}?language=es-ES`);
+        
+        if (spanishVideos.results && spanishVideos.results.length > 0) {
+          // If Spanish videos exist but no trailers, try to combine with English
+          const spanishTrailers = spanishVideos.results.filter(
+            video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
+          );
+          
+          if (spanishTrailers.length === 0) {
+            try {
+              const englishVideos = await this.fetchData<{ results: Video[] }>(`${endpoint}?language=en-US`);
+              const englishTrailers = englishVideos.results.filter(
+                video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
+              );
+              
+              return {
+                results: [...spanishVideos.results, ...englishTrailers]
+              };
+            } catch (englishError) {
+              // If English also fails, return Spanish videos
+              return spanishVideos;
+            }
+          }
+          
+          return spanishVideos;
+        }
+      } catch (spanishError) {
+        // If Spanish fails, try English
+        console.warn('Spanish videos not available, trying English');
+      }
       
-      // If no Spanish videos, try English
-      if (!spanishVideos.results || spanishVideos.results.length === 0) {
+      // Try English as fallback
+      try {
         const englishVideos = await this.fetchData<{ results: Video[] }>(`${endpoint}?language=en-US`);
         return englishVideos;
+      } catch (englishError) {
+        console.warn('English videos not available either');
+        // Return empty results instead of throwing
+        return { results: [] };
       }
-      
-      // If Spanish videos exist but no trailers, combine with English
-      const spanishTrailers = spanishVideos.results.filter(
-        video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
-      );
-      
-      if (spanishTrailers.length === 0) {
-        const englishVideos = await this.fetchData<{ results: Video[] }>(`${endpoint}?language=en-US`);
-        const englishTrailers = englishVideos.results.filter(
-          video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
-        );
-        
-        return {
-          results: [...spanishVideos.results, ...englishTrailers]
-        };
-      }
-      
-      return spanishVideos;
     } catch (error) {
       console.error('Error fetching videos:', error);
       return { results: [] };
@@ -44,24 +131,119 @@ class TMDBService {
 
   // Movies
   async getPopularMovies(page: number = 1): Promise<APIResponse<Movie>> {
-    return this.fetchData(`/movie/popular?language=es-ES&page=${page}`, page === 1);
+    // Get both Spanish and English results for better coverage
+    const [spanishResults, englishResults] = await Promise.all([
+      this.fetchData(`/movie/popular?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/movie/popular?language=en-US&page=${page}&region=US`, page === 1)
+    ]);
+    
+    // Combine results and remove duplicates, prioritizing Spanish
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(movie => 
+        !spanishResults.results.some(spanishMovie => spanishMovie.id === movie.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   async getTopRatedMovies(page: number = 1): Promise<APIResponse<Movie>> {
-    return this.fetchData(`/movie/top_rated?language=es-ES&page=${page}`, page === 1);
+    const [spanishResults, englishResults] = await Promise.all([
+      this.fetchData(`/movie/top_rated?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/movie/top_rated?language=en-US&page=${page}&region=US`, page === 1)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(movie => 
+        !spanishResults.results.some(spanishMovie => spanishMovie.id === movie.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   async getUpcomingMovies(page: number = 1): Promise<APIResponse<Movie>> {
-    return this.fetchData(`/movie/upcoming?language=es-ES&page=${page}`, page === 1);
+    // Get upcoming movies from multiple regions for better coverage
+    const [spanishResults, englishResults, nowPlayingResults] = await Promise.all([
+      this.fetchData(`/movie/upcoming?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/movie/upcoming?language=en-US&page=${page}&region=US`, page === 1),
+      this.fetchData(`/movie/now_playing?language=es-ES&page=${page}&region=ES`, page === 1)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(movie => 
+        !spanishResults.results.some(spanishMovie => spanishMovie.id === movie.id)
+      ),
+      ...nowPlayingResults.results.filter(movie => 
+        !spanishResults.results.some(spanishMovie => spanishMovie.id === movie.id) &&
+        !englishResults.results.some(englishMovie => englishMovie.id === movie.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
+  }
+
+  // Add method to get now playing movies
+  async getNowPlayingMovies(page: number = 1): Promise<APIResponse<Movie>> {
+    const [spanishResults, englishResults] = await Promise.all([
+      this.fetchData(`/movie/now_playing?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/movie/now_playing?language=en-US&page=${page}&region=US`, page === 1)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(movie => 
+        !spanishResults.results.some(spanishMovie => spanishMovie.id === movie.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   async searchMovies(query: string, page: number = 1): Promise<APIResponse<Movie>> {
     const encodedQuery = encodeURIComponent(query);
-    return this.fetchData(`/search/movie?query=${encodedQuery}&language=es-ES&page=${page}`);
+    // Search in both Spanish and English for better coverage
+    const [spanishResults, englishResults] = await Promise.all([
+      this.fetchData(`/search/movie?query=${encodedQuery}&language=es-ES&page=${page}&include_adult=false`),
+      this.fetchData(`/search/movie?query=${encodedQuery}&language=en-US&page=${page}&include_adult=false`)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(movie => 
+        !spanishResults.results.some(spanishMovie => spanishMovie.id === movie.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   async getMovieDetails(id: number): Promise<MovieDetails> {
-    return this.fetchData(`/movie/${id}?language=es-ES`, true);
+    // Try Spanish first, fallback to English if needed
+    try {
+      return await this.fetchData(`/movie/${id}?language=es-ES&append_to_response=credits,videos,images`, true);
+    } catch (error) {
+      console.warn(`Spanish details not available for movie ${id}, trying English`);
+      return this.fetchData(`/movie/${id}?language=en-US&append_to_response=credits,videos,images`, true);
+    }
   }
 
   async getMovieVideos(id: number): Promise<{ results: Video[] }> {
@@ -74,20 +256,118 @@ class TMDBService {
 
   // TV Shows
   async getPopularTVShows(page: number = 1): Promise<APIResponse<TVShow>> {
-    return this.fetchData(`/tv/popular?language=es-ES&page=${page}`, page === 1);
+    // Get TV shows from multiple regions and sources
+    const [spanishResults, englishResults, airingTodayResults] = await Promise.all([
+      this.fetchData(`/tv/popular?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/tv/popular?language=en-US&page=${page}&region=US`, page === 1),
+      this.fetchData(`/tv/airing_today?language=es-ES&page=${page}&region=ES`, page === 1)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(show => 
+        !spanishResults.results.some(spanishShow => spanishShow.id === show.id)
+      ),
+      ...airingTodayResults.results.filter(show => 
+        !spanishResults.results.some(spanishShow => spanishShow.id === show.id) &&
+        !englishResults.results.some(englishShow => englishShow.id === show.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   async getTopRatedTVShows(page: number = 1): Promise<APIResponse<TVShow>> {
-    return this.fetchData(`/tv/top_rated?language=es-ES&page=${page}`, page === 1);
+    const [spanishResults, englishResults] = await Promise.all([
+      this.fetchData(`/tv/top_rated?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/tv/top_rated?language=en-US&page=${page}&region=US`, page === 1)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(show => 
+        !spanishResults.results.some(spanishShow => spanishShow.id === show.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
+  }
+
+  // Add method to get airing today TV shows
+  async getAiringTodayTVShows(page: number = 1): Promise<APIResponse<TVShow>> {
+    const [spanishResults, englishResults] = await Promise.all([
+      this.fetchData(`/tv/airing_today?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/tv/airing_today?language=en-US&page=${page}&region=US`, page === 1)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(show => 
+        !spanishResults.results.some(spanishShow => spanishShow.id === show.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
+  }
+
+  // Add method to get on the air TV shows
+  async getOnTheAirTVShows(page: number = 1): Promise<APIResponse<TVShow>> {
+    const [spanishResults, englishResults] = await Promise.all([
+      this.fetchData(`/tv/on_the_air?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/tv/on_the_air?language=en-US&page=${page}&region=US`, page === 1)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(show => 
+        !spanishResults.results.some(spanishShow => spanishShow.id === show.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   async searchTVShows(query: string, page: number = 1): Promise<APIResponse<TVShow>> {
     const encodedQuery = encodeURIComponent(query);
-    return this.fetchData(`/search/tv?query=${encodedQuery}&language=es-ES&page=${page}`);
+    // Search in both Spanish and English for better coverage
+    const [spanishResults, englishResults] = await Promise.all([
+      this.fetchData(`/search/tv?query=${encodedQuery}&language=es-ES&page=${page}&include_adult=false`),
+      this.fetchData(`/search/tv?query=${encodedQuery}&language=en-US&page=${page}&include_adult=false`)
+    ]);
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(show => 
+        !spanishResults.results.some(spanishShow => spanishShow.id === show.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   async getTVShowDetails(id: number): Promise<TVShowDetails> {
-    return this.fetchData(`/tv/${id}?language=es-ES`, true);
+    // Try Spanish first, fallback to English if needed
+    try {
+      return await this.fetchData(`/tv/${id}?language=es-ES&append_to_response=credits,videos,images`, true);
+    } catch (error) {
+      console.warn(`Spanish details not available for TV show ${id}, trying English`);
+      return this.fetchData(`/tv/${id}?language=en-US&append_to_response=credits,videos,images`, true);
+    }
   }
 
   async getTVShowVideos(id: number): Promise<{ results: Video[] }> {
@@ -155,12 +435,62 @@ class TMDBService {
   // Multi search
   async searchMulti(query: string, page: number = 1): Promise<APIResponse<Movie | TVShow>> {
     const encodedQuery = encodeURIComponent(query);
-    return this.fetchData(`/search/multi?query=${encodedQuery}&language=es-ES&page=${page}`);
+    // Enhanced multi-search with better coverage
+    const [spanishResults, englishResults, personResults] = await Promise.all([
+      this.fetchData(`/search/multi?query=${encodedQuery}&language=es-ES&page=${page}&include_adult=false`),
+      this.fetchData(`/search/multi?query=${encodedQuery}&language=en-US&page=${page}&include_adult=false`),
+      this.fetchData(`/search/person?query=${encodedQuery}&language=es-ES&page=${page}&include_adult=false`)
+    ]);
+    
+    // If searching for a person, get their known_for content
+    let personContent: (Movie | TVShow)[] = [];
+    if (personResults.results.length > 0) {
+      personContent = personResults.results.flatMap(person => 
+        person.known_for || []
+      );
+    }
+    
+    const combinedResults = [
+      ...spanishResults.results,
+      ...englishResults.results.filter(item => 
+        !spanishResults.results.some(spanishItem => spanishItem.id === item.id)
+      ),
+      ...personContent.filter(item => 
+        !spanishResults.results.some(spanishItem => spanishItem.id === item.id) &&
+        !englishResults.results.some(englishItem => englishItem.id === item.id)
+      )
+    ];
+    
+    return {
+      ...spanishResults,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   // Trending content - synchronized with TMDB
   async getTrendingAll(timeWindow: 'day' | 'week' = 'day', page: number = 1): Promise<APIResponse<Movie | TVShow>> {
-    return this.fetchData(`/trending/all/${timeWindow}?language=es-ES&page=${page}`, page === 1);
+    // Get trending from multiple regions for comprehensive coverage
+    const [globalTrending, spanishTrending, usTrending] = await Promise.all([
+      this.fetchData(`/trending/all/${timeWindow}?page=${page}`, page === 1),
+      this.fetchData(`/trending/all/${timeWindow}?language=es-ES&page=${page}&region=ES`, page === 1),
+      this.fetchData(`/trending/all/${timeWindow}?language=en-US&page=${page}&region=US`, page === 1)
+    ]);
+    
+    const combinedResults = [
+      ...globalTrending.results,
+      ...spanishTrending.results.filter(item => 
+        !globalTrending.results.some(globalItem => globalItem.id === item.id)
+      ),
+      ...usTrending.results.filter(item => 
+        !globalTrending.results.some(globalItem => globalItem.id === item.id) &&
+        !spanishTrending.results.some(spanishItem => spanishItem.id === item.id)
+      )
+    ];
+    
+    return {
+      ...globalTrending,
+      results: this.removeDuplicates(combinedResults)
+    };
   }
 
   async getTrendingMovies(timeWindow: 'day' | 'week' = 'day', page: number = 1): Promise<APIResponse<Movie>> {
@@ -219,27 +549,74 @@ class TMDBService {
   // Get fresh trending content for hero carousel (no duplicates)
   async getHeroContent(): Promise<(Movie | TVShow)[]> {
     try {
-      const [trendingDay, trendingWeek, popularMovies, popularTV] = await Promise.all([
+      // Get the most current and diverse content for hero
+      const [trendingDay, trendingWeek, popularMovies, popularTV, nowPlayingMovies, airingTodayTV] = await Promise.all([
         this.getTrendingAll('day', 1),
         this.getTrendingAll('week', 1),
         this.getPopularMovies(1),
-        this.getPopularTVShows(1)
+        this.getPopularTVShows(1),
+        this.getNowPlayingMovies(1),
+        this.getAiringTodayTVShows(1)
       ]);
 
       // Combine and prioritize trending content
       const combinedItems = [
-        ...trendingDay.results.slice(0, 8),
+        ...trendingDay.results.slice(0, 6),
         ...trendingWeek.results.slice(0, 4),
-        ...popularMovies.results.slice(0, 3),
-        ...popularTV.results.slice(0, 3)
+        ...nowPlayingMovies.results.slice(0, 3),
+        ...airingTodayTV.results.slice(0, 3),
+        ...popularMovies.results.slice(0, 2),
+        ...popularTV.results.slice(0, 2)
       ];
 
       // Remove duplicates and return top items
-      return this.removeDuplicates(combinedItems).slice(0, 10);
+      return this.removeDuplicates(combinedItems).slice(0, 12);
     } catch (error) {
       console.error('Error fetching hero content:', error);
       return [];
     }
+  }
+
+  // Enhanced search for people and their content
+  async searchPeople(query: string, page: number = 1): Promise<any> {
+    const encodedQuery = encodeURIComponent(query);
+    return this.fetchData(`/search/person?query=${encodedQuery}&language=es-ES&page=${page}&include_adult=false`);
+  }
+
+  // Get person details and their filmography
+  async getPersonDetails(id: number): Promise<any> {
+    try {
+      const [personDetails, movieCredits, tvCredits] = await Promise.all([
+        this.fetchData(`/person/${id}?language=es-ES`),
+        this.fetchData(`/person/${id}/movie_credits?language=es-ES`),
+        this.fetchData(`/person/${id}/tv_credits?language=es-ES`)
+      ]);
+      
+      return {
+        ...personDetails,
+        movie_credits: movieCredits,
+        tv_credits: tvCredits
+      };
+    } catch (error) {
+      console.error(`Error fetching person details for ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // Force refresh all cached content
+  async forceRefreshAllContent(): Promise<void> {
+    // Clear all caches
+    this.clearCache();
+    
+    // Clear fresh content cache
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('fresh_') || key.includes('trending') || key.includes('popular')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    console.log('All content caches cleared, fresh data will be fetched');
   }
 
   // Batch fetch videos for multiple items
@@ -260,14 +637,17 @@ class TMDBService {
           
           return { key, videos: trailers };
         } catch (error) {
-          console.error(`Error fetching videos for ${key}:`, error);
+          console.warn(`No videos available for ${key}`);
           return { key, videos: [] };
         }
       });
 
-      const results = await Promise.all(videoPromises);
-      results.forEach(({ key, videos }) => {
-        videoMap.set(key, videos);
+      const results = await Promise.allSettled(videoPromises);
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          const { key, videos } = result.value;
+          videoMap.set(key, videos);
+        }
       });
     } catch (error) {
       console.error('Error in batch fetch videos:', error);

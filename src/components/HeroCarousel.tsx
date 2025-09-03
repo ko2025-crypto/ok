@@ -46,9 +46,6 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
   // Cargar videos para cada item
   useEffect(() => {
     const loadVideos = async () => {
-      // First try to get cached videos
-      const cachedVideos: { [key: number]: Video[] } = {};
-      
       const videoPromises = items.map(async (item) => {
         try {
           // Check cache first
@@ -59,25 +56,33 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
             return { id: item.id, videos: cachedVideoData };
           }
           
-          // Fallback to API call
-          const videoData = isMovie 
-            ? await tmdbService.getMovieVideos(item.id)
-            : await tmdbService.getTVShowVideos(item.id);
-          
-          const trailers = videoData.results.filter(
-            video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
-          );
-          
-          return { id: item.id, videos: trailers };
+          // Fallback to API call with error handling
+          try {
+            const videoData = isMovie 
+              ? await tmdbService.getMovieVideos(item.id)
+              : await tmdbService.getTVShowVideos(item.id);
+            
+            const trailers = videoData.results.filter(
+              video => video.site === 'YouTube' && (video.type === 'Trailer' || video.type === 'Teaser')
+            );
+            
+            return { id: item.id, videos: trailers };
+          } catch (videoError) {
+            console.warn(`No videos available for ${isMovie ? 'movie' : 'tv'} ${item.id}`);
+            return { id: item.id, videos: [] };
+          }
         } catch (error) {
-          console.error(`Error loading videos for item ${item.id}:`, error);
+          console.warn(`Error loading videos for item ${item.id}:`, error);
           return { id: item.id, videos: [] };
         }
       });
 
-      const results = await Promise.all(videoPromises);
-      const videosMap = results.reduce((acc, { id, videos }) => {
-        acc[id] = videos;
+      const results = await Promise.allSettled(videoPromises);
+      const videosMap = results.reduce((acc, result) => {
+        if (result.status === 'fulfilled') {
+          const { id, videos } = result.value;
+          acc[id] = videos;
+        }
         return acc;
       }, {} as { [key: number]: Video[] });
       

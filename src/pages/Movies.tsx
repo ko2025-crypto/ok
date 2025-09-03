@@ -7,7 +7,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import type { Movie } from '../types/movie';
 
-type MovieCategory = 'popular' | 'top_rated' | 'upcoming';
+type MovieCategory = 'popular' | 'top_rated' | 'upcoming' | 'now_playing';
 
 export function Movies() {
   const [category, setCategory] = useState<MovieCategory>('popular');
@@ -15,7 +15,8 @@ export function Movies() {
   const categoryTitles = {
     popular: 'Populares',
     top_rated: 'Mejor Valoradas',
-    upcoming: 'Próximos Estrenos'
+    upcoming: 'Próximos Estrenos',
+    now_playing: 'En Cartelera'
   };
 
   const getFetchFunction = (selectedCategory: MovieCategory) => {
@@ -24,6 +25,8 @@ export function Movies() {
         return tmdbService.getTopRatedMovies.bind(tmdbService);
       case 'upcoming':
         return tmdbService.getUpcomingMovies.bind(tmdbService);
+      case 'now_playing':
+        return tmdbService.getNowPlayingMovies.bind(tmdbService);
       default:
         return tmdbService.getPopularMovies.bind(tmdbService);
     }

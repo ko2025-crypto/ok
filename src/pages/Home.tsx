@@ -58,15 +58,27 @@ export function Home() {
         ...uniqueTrending.slice(0, 12).map(item => item.id)
       ]);
       
-      const [moviesRes, tvRes, animeRes] = await Promise.all([
+      // Get comprehensive content including current releases
+      const [moviesRes, tvRes, animeRes, nowPlayingRes, airingTodayRes] = await Promise.all([
         tmdbService.getPopularMovies(1),
         tmdbService.getPopularTVShows(1),
-        tmdbService.getAnimeFromMultipleSources(1)
+        tmdbService.getAnimeFromMultipleSources(1),
+        tmdbService.getNowPlayingMovies(1),
+        tmdbService.getAiringTodayTVShows(1)
       ]);
 
-      // Filter out duplicates
-      const filteredMovies = moviesRes.results.filter(movie => !usedIds.has(movie.id)).slice(0, 8);
-      const filteredTVShows = tvRes.results.filter(show => !usedIds.has(show.id)).slice(0, 8);
+      // Combine and filter out duplicates, prioritizing current content
+      const allMovies = [
+        ...nowPlayingRes.results,
+        ...moviesRes.results.filter(movie => !nowPlayingRes.results.some(np => np.id === movie.id))
+      ];
+      const allTVShows = [
+        ...airingTodayRes.results,
+        ...tvRes.results.filter(show => !airingTodayRes.results.some(at => at.id === show.id))
+      ];
+      
+      const filteredMovies = allMovies.filter(movie => !usedIds.has(movie.id)).slice(0, 8);
+      const filteredTVShows = allTVShows.filter(show => !usedIds.has(show.id)).slice(0, 8);
       const filteredAnime = animeRes.results.filter(anime => !usedIds.has(anime.id)).slice(0, 8);
 
       setPopularMovies(filteredMovies);

@@ -55,11 +55,12 @@ class ContentSyncService {
       this.syncInProgress = true;
       console.log(`Performing ${isWeeklyUpdate ? 'weekly' : 'daily'} content sync...`);
 
-      // Enhanced sync with video fetching
+      // Enhanced sync with comprehensive content fetching
       await Promise.all([
         this.syncTrendingContent('day'),
         this.syncTrendingContent('week'),
         this.syncPopularContent(),
+        this.syncCurrentContent(),
         this.syncAnimeContent(),
         this.syncVideosForPopularContent()
       ]);
@@ -79,39 +80,85 @@ class ContentSyncService {
     }
   }
 
+  private async syncCurrentContent() {
+    try {
+      // Sync current/now playing content for the most up-to-date titles
+      const [nowPlayingMovies, airingTodayTV, onTheAirTV] = await Promise.all([
+        tmdbService.getNowPlayingMovies(1),
+        tmdbService.getAiringTodayTVShows(1),
+        tmdbService.getOnTheAirTVShows(1)
+      ]);
+
+      localStorage.setItem('now_playing_movies', JSON.stringify({
+        content: nowPlayingMovies.results,
+        lastUpdate: new Date().toISOString()
+      }));
+
+      localStorage.setItem('airing_today_tv', JSON.stringify({
+        content: airingTodayTV.results,
+        lastUpdate: new Date().toISOString()
+      }));
+
+      localStorage.setItem('on_the_air_tv', JSON.stringify({
+        content: onTheAirTV.results,
+        lastUpdate: new Date().toISOString()
+      }));
+
+      return { nowPlayingMovies: nowPlayingMovies.results, airingTodayTV: airingTodayTV.results, onTheAirTV: onTheAirTV.results };
+    } catch (error) {
+      console.error('Error syncing current content:', error);
+      return { nowPlayingMovies: [], airingTodayTV: [], onTheAirTV: [] };
+    }
+  }
+
   private async syncVideosForPopularContent() {
     try {
-      // Get popular content to sync videos
-      const [moviesRes, tvRes, animeRes] = await Promise.all([
+      // Get comprehensive content to sync videos including current content
+      const [moviesRes, tvRes, animeRes, nowPlayingRes, airingTodayRes] = await Promise.all([
         tmdbService.getPopularMovies(1),
         tmdbService.getPopularTVShows(1),
-        tmdbService.getAnimeFromMultipleSources(1)
+        tmdbService.getAnimeFromMultipleSources(1),
+        tmdbService.getNowPlayingMovies(1),
+        tmdbService.getAiringTodayTVShows(1)
       ]);
 
       // Prepare items for batch video fetching
       const items = [
-        ...moviesRes.results.slice(0, 10).map(movie => ({ id: movie.id, type: 'movie' as const })),
-        ...tvRes.results.slice(0, 10).map(tv => ({ id: tv.id, type: 'tv' as const })),
-        ...animeRes.results.slice(0, 10).map(anime => ({ id: anime.id, type: 'tv' as const }))
+        ...moviesRes.results.slice(0, 8).map(movie => ({ id: movie.id, type: 'movie' as const })),
+        ...tvRes.results.slice(0, 8).map(tv => ({ id: tv.id, type: 'tv' as const })),
+        ...animeRes.results.slice(0, 6).map(anime => ({ id: anime.id, type: 'tv' as const })),
+        ...nowPlayingRes.results.slice(0, 8).map(movie => ({ id: movie.id, type: 'movie' as const })),
+        ...airingTodayRes.results.slice(0, 6).map(tv => ({ id: tv.id, type: 'tv' as const }))
       ];
 
-      // Batch fetch videos
-      const videoMap = await tmdbService.batchFetchVideos(items);
-      
-      // Store video data
-      const videoData: { [key: string]: any[] } = {};
-      videoMap.forEach((videos, key) => {
-        videoData[key] = videos;
-      });
+      // Remove duplicates from items list
+      const uniqueItems = items.filter((item, index, self) => 
+        index === self.findIndex(t => t.id === item.id && t.type === item.type)
+      );
 
-      localStorage.setItem('content_videos', JSON.stringify({
-        videos: videoData,
-        lastUpdate: new Date().toISOString()
-      }));
+      // Batch fetch videos with error handling
+      try {
+        const videoMap = await tmdbService.batchFetchVideos(uniqueItems);
+        
+        // Store video data
+        const videoData: { [key: string]: any[] } = {};
+        videoMap.forEach((videos, key) => {
+          videoData[key] = videos;
+        });
 
-      console.log(`Synced videos for ${items.length} items`);
+        localStorage.setItem('content_videos', JSON.stringify({
+          videos: videoData,
+          lastUpdate: new Date().toISOString()
+        }));
+
+        console.log(`Synced videos for ${uniqueItems.length} unique items`);
+      } catch (videoError) {
+        console.warn('Some videos could not be synced:', videoError);
+        // Continue without failing the entire sync
+      }
     } catch (error) {
       console.error('Error syncing videos:', error);
+      // Don't throw, just log the error
     }
   }
 
@@ -258,8 +305,21 @@ class ContentSyncService {
   async forceRefresh(): Promise<void> {
     this.lastDailyUpdate = null;
     this.lastWeeklyUpdate = null;
+    
+    // Clear all content caches
+    await tmdbService.forceRefreshAllContent();
+    
     // Clear cached videos
     localStorage.removeItem('content_videos');
+    
+    // Clear all content caches
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.includes('trending') || key.includes('popular') || key.includes('now_playing') || key.includes('airing')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
     await this.performSync(true);
   }
 
