@@ -28,6 +28,11 @@ export class APIService {
           console.warn(`Videos not found for endpoint: ${endpoint}`);
           return { results: [] } as T;
         }
+        // Handle 404 errors gracefully for details and credits endpoints
+        if (response.status === 404 && (endpoint.includes('/movie/') || endpoint.includes('/tv/'))) {
+          console.warn(`Content not found for endpoint: ${endpoint}`);
+          return null as T;
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       

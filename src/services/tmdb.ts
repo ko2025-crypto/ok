@@ -239,11 +239,20 @@ class TMDBService {
   async getMovieDetails(id: number): Promise<MovieDetails> {
     // Try Spanish first, fallback to English if needed
     try {
-      return await this.fetchData(`/movie/${id}?language=es-ES&append_to_response=credits,videos,images`, true);
+      const spanishDetails = await this.fetchData<MovieDetails | null>(`/movie/${id}?language=es-ES&append_to_response=credits,videos,images`, true);
+      if (spanishDetails) {
+        return spanishDetails;
+      }
     } catch (error) {
       console.warn(`Spanish details not available for movie ${id}, trying English`);
-      return this.fetchData(`/movie/${id}?language=en-US&append_to_response=credits,videos,images`, true);
     }
+    
+    const englishDetails = await this.fetchData<MovieDetails | null>(`/movie/${id}?language=en-US&append_to_response=credits,videos,images`, true);
+    if (englishDetails) {
+      return englishDetails;
+    }
+    
+    throw new Error(`Movie with ID ${id} not found`);
   }
 
   async getMovieVideos(id: number): Promise<{ results: Video[] }> {
@@ -251,7 +260,8 @@ class TMDBService {
   }
 
   async getMovieCredits(id: number): Promise<Cast> {
-    return this.fetchData(`/movie/${id}/credits?language=es-ES`, true);
+    const credits = await this.fetchData<Cast | null>(`/movie/${id}/credits?language=es-ES`, true);
+    return credits || { cast: [], crew: [] };
   }
 
   // TV Shows
@@ -363,11 +373,20 @@ class TMDBService {
   async getTVShowDetails(id: number): Promise<TVShowDetails> {
     // Try Spanish first, fallback to English if needed
     try {
-      return await this.fetchData(`/tv/${id}?language=es-ES&append_to_response=credits,videos,images`, true);
+      const spanishDetails = await this.fetchData<TVShowDetails | null>(`/tv/${id}?language=es-ES&append_to_response=credits,videos,images`, true);
+      if (spanishDetails) {
+        return spanishDetails;
+      }
     } catch (error) {
       console.warn(`Spanish details not available for TV show ${id}, trying English`);
-      return this.fetchData(`/tv/${id}?language=en-US&append_to_response=credits,videos,images`, true);
     }
+    
+    const englishDetails = await this.fetchData<TVShowDetails | null>(`/tv/${id}?language=en-US&append_to_response=credits,videos,images`, true);
+    if (englishDetails) {
+      return englishDetails;
+    }
+    
+    throw new Error(`TV show with ID ${id} not found`);
   }
 
   async getTVShowVideos(id: number): Promise<{ results: Video[] }> {
@@ -375,7 +394,8 @@ class TMDBService {
   }
 
   async getTVShowCredits(id: number): Promise<Cast> {
-    return this.fetchData(`/tv/${id}/credits?language=es-ES`, true);
+    const credits = await this.fetchData<Cast | null>(`/tv/${id}/credits?language=es-ES`, true);
+    return credits || { cast: [], crew: [] };
   }
 
   // Anime (using discover with Japanese origin)
