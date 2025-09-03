@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Star, Calendar, Play, Pause } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Calendar, Play, Pause, Sparkles, Zap, Heart } from 'lucide-react';
 import { OptimizedImage } from './OptimizedImage';
 import { tmdbService } from '../services/tmdb';
 import { contentSyncService } from '../services/contentSync';
@@ -19,6 +19,7 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
   const [progress, setProgress] = useState(0);
   const [itemVideos, setItemVideos] = useState<{ [key: number]: Video[] }>({});
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set());
+  const [isButtonHovered, setIsButtonHovered] = useState<string | null>(null);
 
   const AUTOPLAY_INTERVAL = 6000; // 6 seconds
 
@@ -293,23 +294,60 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
               </p>
 
               <div className="flex space-x-4">
-                <button 
+                <button
                   onClick={handleWatchNow}
+                  onMouseEnter={() => setIsButtonHovered('watch')}
+                  onMouseLeave={() => setIsButtonHovered(null)}
                   disabled={!hasTrailer}
-                  className={`px-8 py-4 rounded-full font-semibold transition-all duration-300 hover:scale-105 flex items-center ${
+                  className={`px-8 py-4 rounded-full font-bold transition-all duration-500 flex items-center relative overflow-hidden ${
                     hasTrailer 
-                      ? 'bg-white text-black hover:bg-white/90' 
+                      ? 'bg-white text-black hover:bg-white/90 shadow-2xl transform hover:scale-110' 
                       : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                  }`}
+                  } ${isButtonHovered === 'watch' ? 'scale-110 shadow-2xl' : ''}`}
                 >
-                  <Play className="h-5 w-5 mr-2" />
+                  {/* Animated background */}
+                  {hasTrailer && isButtonHovered === 'watch' && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 animate-pulse" />
+                  )}
+                  
+                  {/* Floating icons */}
+                  {hasTrailer && isButtonHovered === 'watch' && (
+                    <>
+                      <Sparkles className="absolute top-1 left-2 h-3 w-3 text-red-500 animate-bounce" />
+                      <Zap className="absolute top-1 right-2 h-3 w-3 text-yellow-500 animate-pulse" />
+                    </>
+                  )}
+                  
+                  <Play className={`h-5 w-5 mr-2 relative z-10 transition-transform duration-300 ${
+                    isButtonHovered === 'watch' ? 'scale-125 text-red-600' : ''
+                  }`} />
                   {hasTrailer ? 'Ver Tráiler' : 'Sin Tráiler'}
                 </button>
-                <Link 
+                
+                <Link
                   to={`/${itemType}/${currentItem.id}`}
-                  className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full font-semibold hover:bg-white/30 transition-all duration-300 hover:scale-105 flex items-center"
+                  onMouseEnter={() => setIsButtonHovered('info')}
+                  onMouseLeave={() => setIsButtonHovered(null)}
+                  className={`bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full font-bold transition-all duration-500 flex items-center relative overflow-hidden shadow-xl ${
+                    isButtonHovered === 'info' ? 'bg-white/40 scale-110 shadow-2xl' : 'hover:bg-white/30 hover:scale-105'
+                  }`}
                 >
+                  {/* Animated background */}
+                  {isButtonHovered === 'info' && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-purple-500/30 animate-pulse" />
+                  )}
+                  
+                  {/* Floating icons */}
+                  {isButtonHovered === 'info' && (
+                    <>
+                      <Heart className="absolute top-1 left-2 h-3 w-3 text-pink-300 animate-pulse" />
+                      <Star className="absolute top-1 right-2 h-3 w-3 text-yellow-300 animate-bounce" />
+                    </>
+                  )}
+                  
+                  <span className="relative z-10">
                   Más Info
+                  </span>
                 </Link>
               </div>
             </div>

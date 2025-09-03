@@ -1,5 +1,6 @@
 import { BASE_URL, API_OPTIONS } from '../config/api';
 import { apiService } from './api';
+import { contentFilterService } from './contentFilter';
 import type { Movie, TVShow, MovieDetails, TVShowDetails, Video, APIResponse, Genre, Cast, CastMember } from '../types/movie';
 
 class TMDBService {
@@ -147,7 +148,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -166,7 +167,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -191,7 +192,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -211,7 +212,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -232,7 +233,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -286,7 +287,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -305,7 +306,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -325,7 +326,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -345,7 +346,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -366,7 +367,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -435,7 +436,7 @@ class TMDBService {
 
       return {
         ...japaneseAnime,
-        results: this.removeDuplicates(combinedResults)
+        results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
       };
     } catch (error) {
       console.error('Error fetching anime from multiple sources:', error);
@@ -483,7 +484,7 @@ class TMDBService {
     
     return {
       ...spanishResults,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
@@ -509,16 +510,24 @@ class TMDBService {
     
     return {
       ...globalTrending,
-      results: this.removeDuplicates(combinedResults)
+      results: contentFilterService.filterContent(this.removeDuplicates(combinedResults))
     };
   }
 
   async getTrendingMovies(timeWindow: 'day' | 'week' = 'day', page: number = 1): Promise<APIResponse<Movie>> {
-    return this.fetchData(`/trending/movie/${timeWindow}?language=es-ES&page=${page}`, page === 1);
+    const response = await this.fetchData<APIResponse<Movie>>(`/trending/movie/${timeWindow}?language=es-ES&page=${page}`, page === 1);
+    return {
+      ...response,
+      results: contentFilterService.filterContent(response.results)
+    };
   }
 
   async getTrendingTV(timeWindow: 'day' | 'week' = 'day', page: number = 1): Promise<APIResponse<TVShow>> {
-    return this.fetchData(`/trending/tv/${timeWindow}?language=es-ES&page=${page}`, page === 1);
+    const response = await this.fetchData<APIResponse<TVShow>>(`/trending/tv/${timeWindow}?language=es-ES&page=${page}`, page === 1);
+    return {
+      ...response,
+      results: contentFilterService.filterContent(response.results)
+    };
   }
 
   // Enhanced content discovery methods
@@ -534,7 +543,11 @@ class TMDBService {
     if (genre) endpoint += `&with_genres=${genre}`;
     if (year) endpoint += `&year=${year}`;
     
-    return this.fetchData(endpoint);
+    const response = await this.fetchData<APIResponse<Movie>>(endpoint);
+    return {
+      ...response,
+      results: contentFilterService.filterContent(response.results)
+    };
   }
 
   async getDiscoverTVShows(params: {
@@ -551,7 +564,11 @@ class TMDBService {
     if (year) endpoint += `&first_air_date_year=${year}`;
     if (country) endpoint += `&with_origin_country=${country}`;
     
-    return this.fetchData(endpoint);
+    const response = await this.fetchData<APIResponse<TVShow>>(endpoint);
+    return {
+      ...response,
+      results: contentFilterService.filterContent(response.results)
+    };
   }
 
   // Utility method to remove duplicates from combined results
@@ -590,7 +607,7 @@ class TMDBService {
       ];
 
       // Remove duplicates and return top items
-      return this.removeDuplicates(combinedItems).slice(0, 12);
+      return contentFilterService.filterContent(this.removeDuplicates(combinedItems)).slice(0, 12);
     } catch (error) {
       console.error('Error fetching hero content:', error);
       return [];

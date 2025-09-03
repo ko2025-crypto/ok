@@ -1,4 +1,5 @@
 import { tmdbService } from './tmdb';
+import { contentFilterService } from '../services/contentFilter';
 import type { Movie, TVShow } from '../types/movie';
 
 class ContentSyncService {
@@ -165,7 +166,8 @@ class ContentSyncService {
   private async syncTrendingContent(timeWindow: 'day' | 'week') {
     try {
       const response = await tmdbService.getTrendingAll(timeWindow, 1);
-      const uniqueContent = tmdbService.removeDuplicates(response.results);
+      const filteredContent = contentFilterService.filterContent(response.results);
+      const uniqueContent = tmdbService.removeDuplicates(filteredContent);
       
       // Store in localStorage for quick access
       localStorage.setItem(`trending_${timeWindow}`, JSON.stringify({
@@ -187,17 +189,20 @@ class ContentSyncService {
         tmdbService.getPopularTVShows(1)
       ]);
 
+      const filteredMovies = contentFilterService.filterContent(movies.results);
+      const filteredTVShows = contentFilterService.filterContent(tvShows.results);
+
       localStorage.setItem('popular_movies', JSON.stringify({
-        content: movies.results,
+        content: filteredMovies,
         lastUpdate: new Date().toISOString()
       }));
 
       localStorage.setItem('popular_tv', JSON.stringify({
-        content: tvShows.results,
+        content: filteredTVShows,
         lastUpdate: new Date().toISOString()
       }));
 
-      return { movies: movies.results, tvShows: tvShows.results };
+      return { movies: filteredMovies, tvShows: filteredTVShows };
     } catch (error) {
       console.error('Error syncing popular content:', error);
       return { movies: [], tvShows: [] };
@@ -207,13 +212,14 @@ class ContentSyncService {
   private async syncAnimeContent() {
     try {
       const anime = await tmdbService.getAnimeFromMultipleSources(1);
+      const filteredAnime = contentFilterService.filterContent(anime.results);
       
       localStorage.setItem('popular_anime', JSON.stringify({
-        content: anime.results,
+        content: filteredAnime,
         lastUpdate: new Date().toISOString()
       }));
 
-      return anime.results;
+      return filteredAnime;
     } catch (error) {
       console.error('Error syncing anime content:', error);
       return [];

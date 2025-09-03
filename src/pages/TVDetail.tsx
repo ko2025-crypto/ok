@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Star, Calendar, Tv, Plus, X, Play, ChevronDown, Monitor, Rocket, Film, Clock2, Globe, Users, Building, MapPin } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Tv, Plus, X, Play, ChevronDown, Monitor, Rocket, Film, Clock2, Globe, Users, Building, MapPin, Sparkles, Heart, Zap, Check } from 'lucide-react';
 import { tmdbService } from '../services/tmdb';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { PriceCard } from '../components/PriceCard';
@@ -24,6 +24,8 @@ export function TVDetail() {
   const [showSeasonSelector, setShowSeasonSelector] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCartHovered, setIsCartHovered] = useState(false);
+  const [showCartAnimation, setShowCartAnimation] = useState(false);
   const { addItem, removeItem, updateSeasons, isInCart, getItemSeasons } = useCart();
 
   // Get current prices with real-time updates
@@ -121,6 +123,9 @@ export function TVDetail() {
 
   const handleCartAction = () => {
     if (!tvShow) return;
+
+    setShowCartAnimation(true);
+    setTimeout(() => setShowCartAnimation(false), 2000);
 
     const validSeasons = tvShow.seasons.filter(season => season.season_number > 0);
     
@@ -465,29 +470,59 @@ export function TVDetail() {
                 </div>
               )}
 
-              <button
+              <div className="relative">
+                <button
                 onClick={handleCartAction}
+                onMouseEnter={() => setIsCartHovered(true)}
+                onMouseLeave={() => setIsCartHovered(false)}
                 disabled={!isAddToCartEnabled()}
-                className={`w-full mb-6 px-6 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center transform ${
+                className={`w-full mb-6 px-6 py-5 rounded-2xl font-bold transition-all duration-500 flex items-center justify-center transform relative overflow-hidden ${
                   !isAddToCartEnabled()
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : inCart
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white hover:scale-105 hover:shadow-lg'
-                      : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white hover:scale-105 hover:shadow-lg'
-                }`}
-              >
+                      ? 'bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 text-white shadow-2xl scale-105'
+                      : 'bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 hover:from-purple-600 hover:via-pink-600 hover:to-red-600 text-white shadow-xl'
+                } ${isCartHovered ? 'scale-110 shadow-2xl' : ''} ${showCartAnimation ? 'animate-pulse' : ''}`}
+                >
+                {/* Animated background effect */}
+                <div className={`absolute inset-0 bg-gradient-to-r from-white/20 to-transparent transition-all duration-500 ${
+                  isCartHovered ? 'animate-pulse' : ''
+                }`} />
+                
+                {/* Floating icons */}
+                {isCartHovered && (
+                  <>
+                    <Sparkles className="absolute top-2 left-4 h-4 w-4 text-yellow-300 animate-bounce" />
+                    <Heart className="absolute top-2 right-4 h-4 w-4 text-pink-300 animate-pulse" />
+                    <Zap className="absolute bottom-2 left-6 h-4 w-4 text-blue-300 animate-bounce delay-100" />
+                    <Star className="absolute bottom-2 right-6 h-4 w-4 text-yellow-300 animate-pulse delay-200" />
+                  </>
+                )}
+                
                 {inCart ? (
                   <>
-                    <X className="mr-2 h-5 w-5" />
-                    Retirar del Carrito
+                    <X className={`mr-3 h-6 w-6 transition-transform duration-300 relative z-10 ${
+                      isCartHovered ? 'rotate-90 scale-125' : ''
+                    }`} />
+                    <span className="relative z-10 text-lg">Retirar del Carrito</span>
                   </>
                 ) : (
                   <>
-                    <Plus className="mr-2 h-5 w-5" />
-                    Agregar al Carrito
+                    <Plus className={`mr-3 h-6 w-6 transition-transform duration-300 relative z-10 ${
+                      isCartHovered ? 'rotate-180 scale-125' : ''
+                    }`} />
+                    <span className="relative z-10 text-lg">Agregar al Carrito</span>
                   </>
                 )}
-              </button>
+                </button>
+                
+                {/* Success indicator */}
+                {inCart && (
+                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-400 to-emerald-400 text-white p-2 rounded-full animate-bounce shadow-lg">
+                    <Check className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
 
               {/* Mensaje informativo sobre selección automática */}
               {hasMultipleSeasons && selectedSeasons.length === 0 && !inCart && (
