@@ -236,7 +236,7 @@ class TMDBService {
     };
   }
 
-  async getMovieDetails(id: number): Promise<MovieDetails> {
+  async getMovieDetails(id: number): Promise<MovieDetails | null> {
     // Try Spanish first, fallback to English if needed
     try {
       const spanishDetails = await this.fetchData<MovieDetails | null>(`/movie/${id}?language=es-ES&append_to_response=credits,videos,images`, true);
@@ -252,7 +252,7 @@ class TMDBService {
       return englishDetails;
     }
     
-    throw new Error(`Movie with ID ${id} not found`);
+    return null;
   }
 
   async getMovieVideos(id: number): Promise<{ results: Video[] }> {
@@ -370,7 +370,7 @@ class TMDBService {
     };
   }
 
-  async getTVShowDetails(id: number): Promise<TVShowDetails> {
+  async getTVShowDetails(id: number): Promise<TVShowDetails | null> {
     // Try Spanish first, fallback to English if needed
     try {
       const spanishDetails = await this.fetchData<TVShowDetails | null>(`/tv/${id}?language=es-ES&append_to_response=credits,videos,images`, true);
@@ -386,7 +386,7 @@ class TMDBService {
       return englishDetails;
     }
     
-    throw new Error(`TV show with ID ${id} not found`);
+    return null;
   }
 
   async getTVShowVideos(id: number): Promise<{ results: Video[] }> {
