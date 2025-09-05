@@ -278,9 +278,11 @@ export function MovieDetail() {
               </div>
               
               <div className="p-6">
-                onMouseEnter={() => setIsCartHovered(true)}
-                onMouseLeave={() => setIsCartHovered(false)}
-                className={`w-full mb-6 px-6 py-5 rounded-2xl font-bold transition-all duration-500 flex items-center justify-center transform relative overflow-hidden ${
+                <button
+                  onClick={handleCartAction}
+                  onMouseEnter={() => setIsCartHovered(true)}
+                  onMouseLeave={() => setIsCartHovered(false)}
+                  className={`w-full mb-6 px-6 py-5 rounded-2xl font-bold transition-all duration-500 flex items-center justify-center transform relative overflow-hidden ${
                   inCart
                     ? 'bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 text-white shadow-2xl scale-105'
                     : 'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white shadow-xl'
@@ -321,9 +323,13 @@ export function MovieDetail() {
                 {/* Success indicator */}
                 {inCart && (
                   <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-400 to-emerald-400 text-white p-2 rounded-full animate-bounce shadow-lg">
-                    <Check className="h-4 w-4" />
+                    <Star className="h-4 w-4" />
                   </div>
                 )}
+              </div>
+
+
+
               </div>
 
               {/* Price Card */}
@@ -333,6 +339,7 @@ export function MovieDetail() {
                   isAnime={isAnime}
                 />
               </div>
+
               <div className="space-y-6">
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-blue-200 transition-colors">
                   <div className="flex items-center mb-2">
@@ -381,9 +388,6 @@ export function MovieDetail() {
                       ? `$${movie.revenue.toLocaleString()}`
                       : 'No disponible'
                     }
-                  </p>
-                </div>
-
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-pink-200 transition-colors">
                   <div className="flex items-center mb-2">
                     <div className="bg-pink-100 p-2 rounded-lg mr-3 shadow-sm">
@@ -395,7 +399,7 @@ export function MovieDetail() {
                     {movie.vote_count.toLocaleString()} votos
                   </p>
                 </div>
-
+                  </p>
                 {movie.production_companies.length > 0 && (
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-indigo-200 transition-colors">
                     <div className="flex items-center mb-3">
@@ -415,7 +419,7 @@ export function MovieDetail() {
                     </div>
                   </div>
                 )}
-
+                </div>
                 {movie.production_countries.length > 0 && (
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-orange-200 transition-colors">
                     <div className="flex items-center mb-3">
@@ -436,11 +440,9 @@ export function MovieDetail() {
                   </div>
                 )}
               </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
   );
 }

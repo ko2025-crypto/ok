@@ -2,6 +2,31 @@ import React from 'react';
 import { DollarSign, Tv, Film, Star, CreditCard } from 'lucide-react';
 import { AdminContext } from '../context/AdminContext';
 
+// Listen for admin state changes
+const useAdminSync = () => {
+  const [syncTimestamp, setSyncTimestamp] = React.useState(Date.now());
+  
+  React.useEffect(() => {
+    const handleAdminChange = (event: CustomEvent) => {
+      setSyncTimestamp(Date.now());
+    };
+    
+    const handleFullSync = (event: CustomEvent) => {
+      setSyncTimestamp(Date.now());
+    };
+    
+    window.addEventListener('admin_state_change', handleAdminChange as EventListener);
+    window.addEventListener('admin_full_sync', handleFullSync as EventListener);
+    
+    return () => {
+      window.removeEventListener('admin_state_change', handleAdminChange as EventListener);
+      window.removeEventListener('admin_full_sync', handleFullSync as EventListener);
+    };
+  }, []);
+  
+  return syncTimestamp;
+};
+
 interface PriceCardProps {
   type: 'movie' | 'tv';
   selectedSeasons?: number[];
@@ -11,6 +36,7 @@ interface PriceCardProps {
 
 export function PriceCard({ type, selectedSeasons = [], episodeCount = 0, isAnime = false }: PriceCardProps) {
   const adminContext = React.useContext(AdminContext);
+  const syncTimestamp = useAdminSync(); // Real-time sync
   
   // Get prices from admin context with real-time updates
   const moviePrice = adminContext?.state?.prices?.moviePrice || 80;

@@ -3,6 +3,31 @@ import { Toast } from '../components/Toast';
 import { AdminContext } from './AdminContext';
 import type { CartItem } from '../types/movie';
 
+// Listen for admin state changes
+const useAdminSync = () => {
+  const [syncTimestamp, setSyncTimestamp] = React.useState(Date.now());
+  
+  React.useEffect(() => {
+    const handleAdminChange = (event: CustomEvent) => {
+      setSyncTimestamp(Date.now());
+    };
+    
+    const handleFullSync = (event: CustomEvent) => {
+      setSyncTimestamp(Date.now());
+    };
+    
+    window.addEventListener('admin_state_change', handleAdminChange as EventListener);
+    window.addEventListener('admin_full_sync', handleFullSync as EventListener);
+    
+    return () => {
+      window.removeEventListener('admin_state_change', handleAdminChange as EventListener);
+      window.removeEventListener('admin_full_sync', handleFullSync as EventListener);
+    };
+  }, []);
+  
+  return syncTimestamp;
+};
+
 interface SeriesCartItem extends CartItem {
   selectedSeasons?: number[];
   paymentType?: 'cash' | 'transfer';
@@ -91,6 +116,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0 });
   const adminContext = React.useContext(AdminContext);
+  const syncTimestamp = useAdminSync(); // Real-time sync
   const [toast, setToast] = React.useState<{
     message: string;
     type: 'success' | 'error';

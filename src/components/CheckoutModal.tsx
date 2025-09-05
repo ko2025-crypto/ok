@@ -2,6 +2,31 @@ import React, { useState } from 'react';
 import { X, User, MapPin, Phone, Copy, Check, MessageCircle, Calculator, DollarSign, CreditCard } from 'lucide-react';
 import { AdminContext } from '../context/AdminContext';
 
+// Listen for admin state changes
+const useAdminSync = () => {
+  const [syncTimestamp, setSyncTimestamp] = React.useState(Date.now());
+  
+  React.useEffect(() => {
+    const handleAdminChange = (event: CustomEvent) => {
+      setSyncTimestamp(Date.now());
+    };
+    
+    const handleFullSync = (event: CustomEvent) => {
+      setSyncTimestamp(Date.now());
+    };
+    
+    window.addEventListener('admin_state_change', handleAdminChange as EventListener);
+    window.addEventListener('admin_full_sync', handleFullSync as EventListener);
+    
+    return () => {
+      window.removeEventListener('admin_state_change', handleAdminChange as EventListener);
+      window.removeEventListener('admin_full_sync', handleFullSync as EventListener);
+    };
+  }, []);
+  
+  return syncTimestamp;
+};
+
 export interface CustomerInfo {
   fullName: string;
   phone: string;
@@ -58,6 +83,7 @@ const BASE_DELIVERY_ZONES = {
 
 export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: CheckoutModalProps) {
   const adminContext = React.useContext(AdminContext);
+  const syncTimestamp = useAdminSync(); // Real-time sync
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     fullName: '',
     phone: '',

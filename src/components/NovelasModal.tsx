@@ -2,6 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { X, Download, MessageCircle, Phone, BookOpen, Info, Check, DollarSign, CreditCard, Calculator, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
 import { AdminContext } from '../context/AdminContext';
 
+// Listen for admin state changes
+const useAdminSync = () => {
+  const [syncTimestamp, setSyncTimestamp] = React.useState(Date.now());
+  
+  React.useEffect(() => {
+    const handleAdminChange = (event: CustomEvent) => {
+      setSyncTimestamp(Date.now());
+    };
+    
+    const handleFullSync = (event: CustomEvent) => {
+      setSyncTimestamp(Date.now());
+    };
+    
+    window.addEventListener('admin_state_change', handleAdminChange as EventListener);
+    window.addEventListener('admin_full_sync', handleFullSync as EventListener);
+    
+    return () => {
+      window.removeEventListener('admin_state_change', handleAdminChange as EventListener);
+      window.removeEventListener('admin_full_sync', handleFullSync as EventListener);
+    };
+  }, []);
+  
+  return syncTimestamp;
+};
+
 interface Novela {
   id: number;
   titulo: string;
@@ -19,6 +44,7 @@ interface NovelasModalProps {
 
 export function NovelasModal({ isOpen, onClose }: NovelasModalProps) {
   const adminContext = React.useContext(AdminContext);
+  const syncTimestamp = useAdminSync(); // Real-time sync
   const [selectedNovelas, setSelectedNovelas] = useState<number[]>([]);
   const [novelasWithPayment, setNovelasWithPayment] = useState<Novela[]>([]);
   const [showNovelList, setShowNovelList] = useState(false);
