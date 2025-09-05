@@ -479,8 +479,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Context methods implementation
   const login = (username: string, password: string): boolean => {
-    // Credenciales ocultas por seguridad - contactar administrador
-    const success = false; // Las credenciales reales están protegidas
+    // Validación de credenciales
+    const success = username === 'yero' && password === 'tvalacarta2029*+';
     dispatch({ type: 'LOGIN', payload: { username, password } });
     if (success) {
       addNotification({

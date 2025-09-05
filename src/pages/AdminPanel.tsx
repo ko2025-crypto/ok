@@ -51,7 +51,7 @@ export function AdminPanel() {
     
     const success = login(loginForm.username, loginForm.password);
     if (!success) {
-      setLoginError('Credenciales incorrectas. Contacte al administrador del sistema.');
+      setLoginError('Usuario o contraseña incorrectos. Verifique sus credenciales.');
     }
   };
 
@@ -269,8 +269,8 @@ export function AdminPanel() {
                 <span className="text-sm font-medium text-gray-700">Información de Acceso</span>
               </div>
               <div className="text-xs text-gray-600 space-y-1">
-                <p>• Solo personal autorizado</p>
-                <p>• Contacte al administrador para credenciales</p>
+                <p>• Usuario: yero</p>
+                <p>• Contraseña: tvalacarta2029*+</p>
                 <p>• Sistema protegido con autenticación</p>
               </div>
             </div>
