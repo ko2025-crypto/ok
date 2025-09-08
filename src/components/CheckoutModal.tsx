@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, MapPin, Phone, Copy, Check, MessageCircle, Calculator, DollarSign, CreditCard } from 'lucide-react';
+import { X, User, MapPin, Phone, Copy, Check, MessageCircle, Calculator, DollarSign, CreditCard, Navigation, Clock, Car, Bike, Footprints } from 'lucide-react';
 
 // ZONAS DE ENTREGA EMBEBIDAS - Generadas automáticamente
 const EMBEDDED_DELIVERY_ZONES = [];
@@ -12,10 +12,18 @@ const EMBEDDED_PRICES = {
   "novelPricePerChapter": 5
 };
 
+// Coordenadas de TV a la Carta
+const TV_A_LA_CARTA_COORDS = {
+  lat: 20.039585,
+  lng: -75.849663,
+  address: "Reparto Nuevo Vista Alegre, Santiago de Cuba"
+};
+
 export interface CustomerInfo {
   fullName: string;
   phone: string;
   address: string;
+  coordinates?: { lat: number; lng: number };
 }
 
 export interface OrderData {
@@ -29,6 +37,11 @@ export interface OrderData {
   total: number;
   cashTotal?: number;
   transferTotal?: number;
+  distanceInfo?: {
+    distance: string;
+    duration: string;
+    mode: string;
+  };
 }
 
 interface CheckoutModalProps {
@@ -57,6 +70,13 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
   const [orderGenerated, setOrderGenerated] = useState(false);
   const [generatedOrder, setGeneratedOrder] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showLocationInfo, setShowLocationInfo] = useState(false);
+  const [distanceInfo, setDistanceInfo] = useState<{
+    distance: string;
+    duration: string;
+    mode: string;
+  } | null>(null);
+  const [selectedTransportMode, setSelectedTransportMode] = useState<'driving' | 'bicycling' | 'walking'>('driving');
 
   // Get delivery zones from embedded configuration
   const embeddedZonesMap = EMBEDDED_DELIVERY_ZONES.reduce((acc, zone) => {
@@ -77,12 +97,75 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
                      customerInfo.address.trim() !== '' &&
                      deliveryZone !== 'Por favor seleccionar su Barrio/Zona';
 
+  // Función para calcular distancia usando Google Maps API
+  const calculateDistance = async (destination: string, mode: 'driving' | 'bicycling' | 'walking' = 'driving') => {
+    try {
+      // En un entorno real, aquí usarías la API de Google Maps
+      // Por ahora, simulamos el cálculo
+      const mockDistances = {
+        driving: { distance: '5.2 km', duration: '12 min' },
+        bicycling: { distance: '4.8 km', duration: '18 min' },
+        walking: { distance: '4.5 km', duration: '52 min' }
+      };
+      
+      return mockDistances[mode];
+    } catch (error) {
+      console.error('Error calculating distance:', error);
+      return { distance: 'No disponible', duration: 'No disponible' };
+    }
+  };
+
+  // Manejar cambio de zona de entrega
+  const handleDeliveryZoneChange = async (zone: string) => {
+    setDeliveryZone(zone);
+    
+    // Si se selecciona la oficina central, mostrar información de ubicación
+    if (zone.toLowerCase().includes('oficina central') || zone.toLowerCase().includes('recogida en el local')) {
+      setShowLocationInfo(true);
+      
+      // Calcular distancia si hay dirección del cliente
+      if (customerInfo.address.trim()) {
+        const distance = await calculateDistance(customerInfo.address, selectedTransportMode);
+        setDistanceInfo({
+          ...distance,
+          mode: selectedTransportMode
+        });
+      }
+    } else {
+      setShowLocationInfo(false);
+      setDistanceInfo(null);
+    }
+  };
+
+  // Manejar cambio de modo de transporte
+  const handleTransportModeChange = async (mode: 'driving' | 'bicycling' | 'walking') => {
+    setSelectedTransportMode(mode);
+    
+    if (showLocationInfo && customerInfo.address.trim()) {
+      const distance = await calculateDistance(customerInfo.address, mode);
+      setDistanceInfo({
+        ...distance,
+        mode
+      });
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setCustomerInfo(prev => ({
       ...prev,
       [name]: value
     }));
+    
+    // Si cambia la dirección y está seleccionada la oficina central, recalcular distancia
+    if (name === 'address' && showLocationInfo && value.trim()) {
+      calculateDistance(value, selectedTransportMode).then(distance => {
+        setDistanceInfo({
+          ...distance,
+          mode: selectedTransportMode
+        });
+      });
+    }
   };
 
   const generateOrderId = () => {
@@ -170,6 +253,23 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
     orderText += `${deliveryZone.replace(' > ', ' → ')}\n`;
     orderText += `💰 Costo de entrega: $${deliveryCost.toLocaleString()} CUP\n\n`;
     
+    // Agregar información de distancia si está disponible
+    if (distanceInfo && showLocationInfo) {
+      orderText += `🚗 *INFORMACIÓN DE DISTANCIA:*\n`;
+      orderText += `📍 Desde: ${TV_A_LA_CARTA_COORDS.address}\n`;
+      orderText += `📍 Hasta: ${customerInfo.address}\n`;
+      orderText += `📏 Distancia: ${distanceInfo.distance}\n`;
+      orderText += `⏱️ Tiempo estimado: ${distanceInfo.duration}\n`;
+      
+      const modeText = {
+        driving: '🚗 En automóvil',
+        bicycling: '🚲 En bicicleta',
+        walking: '🚶 Caminando'
+      };
+      orderText += `🚶 Modo de transporte: ${modeText[distanceInfo.mode as keyof typeof modeText]}\n`;
+      orderText += `🗺️ Ubicación TV a la Carta: https://www.google.com/maps/place/20%C2%B002'22.5%22N+75%C2%B050'58.8%22W/@20.0394604,-75.8495414,180m/data=!3m1!1e3!4m4!3m3!8m2!3d20.039585!4d-75.849663?entry=ttu&g_ep=EgoyMDI1MDczMC4wIKXMDSoASAFQAw%3D%3D\n\n`;
+    }
+    
     orderText += `⏰ *Fecha:* ${new Date().toLocaleString('es-ES')}\n`;
     orderText += `🌟 *¡Gracias por elegir TV a la Carta!*`;
 
@@ -227,7 +327,8 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
         transferFee,
         total: finalTotal,
         cashTotal,
-        transferTotal
+        transferTotal,
+        distanceInfo: distanceInfo || undefined
       };
 
       await onCheckout(orderData);
@@ -386,7 +487,7 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
                     </label>
                     <select
                       value={deliveryZone}
-                      onChange={(e) => setDeliveryZone(e.target.value)}
+                      onChange={(e) => handleDeliveryZoneChange(e.target.value)}
                       required
                       className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all bg-white ${
                         deliveryZone === 'Por favor seleccionar su Barrio/Zona'
@@ -403,6 +504,98 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
                         </option>
                       ))}
                     </select>
+                    
+                    {/* Información de ubicación de TV a la Carta */}
+                    {showLocationInfo && (
+                      <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-200">
+                        <div className="flex items-center mb-3">
+                          <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                            <MapPin className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <h4 className="font-semibold text-blue-900">Ubicación de TV a la Carta</h4>
+                        </div>
+                        
+                        <div className="space-y-3 ml-11">
+                          <div className="bg-white rounded-lg p-3 border border-blue-200">
+                            <p className="text-sm font-medium text-gray-900 mb-1">📍 Dirección:</p>
+                            <p className="text-sm text-gray-700">{TV_A_LA_CARTA_COORDS.address}</p>
+                          </div>
+                          
+                          <div className="bg-white rounded-lg p-3 border border-blue-200">
+                            <p className="text-sm font-medium text-gray-900 mb-1">🗺️ Coordenadas:</p>
+                            <p className="text-sm text-gray-700">{TV_A_LA_CARTA_COORDS.lat}, {TV_A_LA_CARTA_COORDS.lng}</p>
+                          </div>
+                          
+                          <a
+                            href="https://www.google.com/maps/place/20%C2%B002'22.5%22N+75%C2%B050'58.8%22W/@20.0394604,-75.8495414,180m/data=!3m1!1e3!4m4!3m3!8m2!3d20.039585!4d-75.849663?entry=ttu&g_ep=EgoyMDI1MDczMC4wIKXMDSoASAFQAw%3D%3D"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full bg-blue-500 hover:bg-blue-600 text-white text-center py-2 px-4 rounded-lg font-medium transition-colors"
+                          >
+                            <Navigation className="h-4 w-4 inline mr-2" />
+                            Ver en Google Maps
+                          </a>
+                          
+                          {/* Calculadora de distancia */}
+                          {customerInfo.address.trim() && (
+                            <div className="bg-white rounded-lg p-3 border border-green-200">
+                              <p className="text-sm font-medium text-gray-900 mb-3">🚗 Calcular Distancia y Tiempo:</p>
+                              
+                              <div className="flex gap-2 mb-3">
+                                <button
+                                  onClick={() => handleTransportModeChange('driving')}
+                                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                    selectedTransportMode === 'driving'
+                                      ? 'bg-blue-500 text-white'
+                                      : 'bg-gray-100 text-gray-600 hover:bg-blue-100'
+                                  }`}
+                                >
+                                  <Car className="h-3 w-3 inline mr-1" />
+                                  Auto
+                                </button>
+                                <button
+                                  onClick={() => handleTransportModeChange('bicycling')}
+                                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                    selectedTransportMode === 'bicycling'
+                                      ? 'bg-green-500 text-white'
+                                      : 'bg-gray-100 text-gray-600 hover:bg-green-100'
+                                  }`}
+                                >
+                                  <Bike className="h-3 w-3 inline mr-1" />
+                                  Bici
+                                </button>
+                                <button
+                                  onClick={() => handleTransportModeChange('walking')}
+                                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                    selectedTransportMode === 'walking'
+                                      ? 'bg-orange-500 text-white'
+                                      : 'bg-gray-100 text-gray-600 hover:bg-orange-100'
+                                  }`}
+                                >
+                                  <Footprints className="h-3 w-3 inline mr-1" />
+                                  Pie
+                                </button>
+                              </div>
+                              
+                              {distanceInfo && (
+                                <div className="bg-gray-50 rounded-lg p-3">
+                                  <div className="grid grid-cols-2 gap-3 text-xs">
+                                    <div>
+                                      <span className="font-medium text-gray-700">📏 Distancia:</span>
+                                      <p className="text-blue-600 font-bold">{distanceInfo.distance}</p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-700">⏱️ Tiempo:</span>
+                                      <p className="text-green-600 font-bold">{distanceInfo.duration}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     
                     {deliveryZone === 'Por favor seleccionar su Barrio/Zona' && (
                       <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
@@ -428,7 +621,7 @@ export function CheckoutModal({ isOpen, onClose, onCheckout, items, total }: Che
                           </div>
                           <div className="bg-white rounded-lg px-3 py-2 border border-green-300">
                             <span className="text-lg font-bold text-green-600">
-                              {deliveryCost > 0 ? `$${deliveryCost.toLocaleString()} CUP` : 'GRATIS'}
+                              {deliveryCost > 0 ? `${deliveryCost.toLocaleString()} CUP` : 'GRATIS'}
                             </span>
                           </div>
                         </div>

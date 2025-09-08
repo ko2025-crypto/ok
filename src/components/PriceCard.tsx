@@ -81,7 +81,7 @@ export function PriceCard({ type, selectedSeasons = [], episodeCount = 0, isAnim
               Efectivo
             </span>
             <span className="text-xl font-black text-green-700">
-              $${price.toLocaleString()} CUP
+              ${price.toLocaleString()} CUP
             </span>
           </div>
         </div>
@@ -96,7 +96,7 @@ export function PriceCard({ type, selectedSeasons = [], episodeCount = 0, isAnim
               Transferencia
             </span>
             <span className="text-xl font-black text-orange-700">
-              $${transferPrice.toLocaleString()} CUP
+              ${transferPrice.toLocaleString()} CUP
             </span>
           </div>
           <div className="text-sm text-orange-600 font-semibold bg-orange-100 px-2 py-1 rounded-full text-center">
@@ -106,7 +106,7 @@ export function PriceCard({ type, selectedSeasons = [], episodeCount = 0, isAnim
         
         {type === 'tv' && selectedSeasons.length > 0 && (
           <div className="text-sm text-green-600 font-bold text-center bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl p-3 border border-green-200">
-            $${(price / selectedSeasons.length).toLocaleString()} CUP por temporada (efectivo)
+            ${(price / selectedSeasons.length).toLocaleString()} CUP por temporada (efectivo)
           </div>
         )}
       </div>
