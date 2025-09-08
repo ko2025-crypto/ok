@@ -1,6 +1,38 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import JSZip from 'jszip';
 
+// CONFIGURACIÓN EMBEBIDA - Generada automáticamente
+const EMBEDDED_CONFIG = {
+  "version": "2.1.0",
+  "lastExport": "2025-09-05T08:44:06.529Z",
+  "prices": {
+    "moviePrice": 80,
+    "seriesPrice": 300,
+    "transferFeePercentage": 10,
+    "novelPricePerChapter": 5
+  },
+  "deliveryZones": [],
+  "novels": [],
+  "settings": {
+    "autoSync": true,
+    "syncInterval": 300000,
+    "enableNotifications": true,
+    "maxNotifications": 100
+  },
+  "metadata": {
+    "totalOrders": 0,
+    "totalRevenue": 0,
+    "lastOrderDate": "",
+    "systemUptime": "2025-09-05T07:41:37.754Z"
+  }
+};
+
+// CREDENCIALES DE ACCESO (CONFIGURABLES)
+const ADMIN_CREDENTIALS = {
+  username: 'admin',
+  password: 'tvalacarta2024'
+};
+
 // Types
 export interface PriceConfig {
   moviePrice: number;
@@ -112,52 +144,26 @@ interface AdminContextType {
   syncAllSections: () => Promise<void>;
 }
 
-// Initial state with system config
-const initialSystemConfig: SystemConfig = {
-  version: '2.1.0',
-  lastExport: new Date().toISOString(),
-  prices: {
-    moviePrice: 80,
-    seriesPrice: 300,
-    transferFeePercentage: 10,
-    novelPricePerChapter: 5,
-  },
-  deliveryZones: [],
-  novels: [],
-  settings: {
-    autoSync: true,
-    syncInterval: 300000, // 5 minutes
-    enableNotifications: true,
-    maxNotifications: 100,
-  },
-  metadata: {
-    totalOrders: 0,
-    totalRevenue: 0,
-    lastOrderDate: '',
-    systemUptime: new Date().toISOString(),
-  },
-};
-
+// Initial state with embedded configuration
 const initialState: AdminState = {
   isAuthenticated: false,
-  prices: initialSystemConfig.prices,
-  deliveryZones: initialSystemConfig.deliveryZones,
-  novels: initialSystemConfig.novels,
+  prices: EMBEDDED_CONFIG.prices,
+  deliveryZones: EMBEDDED_CONFIG.deliveryZones,
+  novels: EMBEDDED_CONFIG.novels,
   notifications: [],
   syncStatus: {
     lastSync: new Date().toISOString(),
     isOnline: true,
     pendingChanges: 0,
   },
-  systemConfig: initialSystemConfig,
+  systemConfig: EMBEDDED_CONFIG,
 };
 
 // Reducer
 function adminReducer(state: AdminState, action: AdminAction): AdminState {
   switch (action.type) {
     case 'LOGIN':
-      // Validación de credenciales protegida - contactar administrador del sistema
-      if (false) { // Las credenciales reales no están expuestas en el código
+      if (action.payload.username === ADMIN_CREDENTIALS.username && action.payload.password === ADMIN_CREDENTIALS.password) {
         return { ...state, isAuthenticated: true };
       }
       return state;
@@ -479,9 +485,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Context methods implementation
   const login = (username: string, password: string): boolean => {
-    // Validación de credenciales
-    const success = username === 'yero' && password === 'tvalacarta2029*+';
     dispatch({ type: 'LOGIN', payload: { username, password } });
+    const success = username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password;
     if (success) {
       addNotification({
         type: 'success',

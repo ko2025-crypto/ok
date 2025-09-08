@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Trash2, Star, Calendar, MessageCircle, ArrowLeft, Edit3, Tv, DollarSign, CreditCard, Calculator } from 'lucide-react';
+import { ShoppingCart, Trash2, Star, Calendar, MessageCircle, ArrowLeft, Edit3, Tv, DollarSign, CreditCard, Calculator, Sparkles, Zap, Heart, Check, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { AdminContext } from '../context/AdminContext';
 import { PriceCard } from '../components/PriceCard';
@@ -139,125 +139,147 @@ export function Cart() {
 
           <div className="divide-y divide-gray-200">
             {state.items.map((item) => (
-              <div key={`${item.type}-${item.id}`} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
+              <div key={`${item.type}-${item.id}`} className="p-6 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 border-l-4 border-transparent hover:border-blue-400">
                 <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
                   {/* Poster */}
                   <Link to={getItemUrl(item)} className="flex-shrink-0 mx-auto sm:mx-0">
                     <img
                       src={getPosterUrl(item.poster_path)}
                       alt={item.title}
-                      className="w-20 h-28 sm:w-16 sm:h-24 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                      className="w-24 h-36 sm:w-20 sm:h-28 object-cover rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 border-white"
                     />
                   </Link>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0 text-center sm:text-left">
-                    {/* Payment Type Selection */}
-                    <div className="mb-3 sm:mb-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                        <span className="text-sm font-medium text-gray-700 text-center sm:text-left">Tipo de pago:</span>
-                        <div className="flex justify-center sm:justify-start space-x-2">
-                          <button
-                            onClick={() => updatePaymentType(item.id, 'cash')}
-                            className={`px-3 py-2 rounded-full text-xs font-medium transition-colors ${
-                              item.paymentType === 'cash'
-                                ? 'bg-green-500 text-white'
-                                : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                            }`}
-                          >
-                            <DollarSign className="h-3 w-3 inline mr-1" />
-                            Efectivo
-                          </button>
-                          <button
-                            onClick={() => updatePaymentType(item.id, 'transfer')}
-                            className={`px-3 py-2 rounded-full text-xs font-medium transition-colors ${
-                              item.paymentType === 'transfer'
-                                ? 'bg-orange-500 text-white'
-                                : 'bg-gray-200 text-gray-600 hover:bg-orange-100'
-                            }`}
-                          >
-                            <CreditCard className="h-3 w-3 inline mr-1" />
-                            Transferencia (+{adminContext?.state?.prices?.transferFeePercentage || 10}%)
-                          </button>
-                        </div>
-                      </div>
-                    </div>
 
                     <Link
                       to={getItemUrl(item)}
-                      className="block hover:text-blue-600 transition-colors mb-2"
+                      className="block hover:text-blue-600 transition-colors mb-3"
                     >
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 break-words hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 transition-all duration-300">
                         {item.title}
                       </h3>
                     </Link>
                     
                     {item.type === 'tv' && item.selectedSeasons && item.selectedSeasons.length > 0 && (
-                      <div className="mb-2">
-                        <span className="inline-block bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">
+                      <div className="mb-3">
+                        <span className="inline-block bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold border border-purple-200 shadow-sm">
+                          <Tv className="h-4 w-4 inline mr-2" />
                           Temporadas: {item.selectedSeasons.sort((a, b) => a - b).join(', ')}
                         </span>
                       </div>
                     )}
                     
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 mt-2 text-sm text-gray-600">
-                      <span className="bg-gray-100 px-2 py-1 rounded text-xs font-medium">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-3 text-sm text-gray-600">
+                      <span className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 px-3 py-2 rounded-full text-xs font-semibold border border-blue-200 shadow-sm">
                         {item.type === 'movie' ? 'Película' : 'Serie'}
                       </span>
-                      {item.type === 'tv' && item.selectedSeasons && item.selectedSeasons.length > 0 && (
-                        <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-medium inline-flex items-center">
-                          <Tv className="h-3 w-3 mr-1" />
-                          {item.selectedSeasons.length} temp.
-                        </span>
-                      )}
-                      <div className="inline-flex items-center">
+                      <div className="inline-flex items-center bg-gray-50 px-3 py-2 rounded-full border border-gray-200">
                         <Calendar className="h-4 w-4 mr-1" />
                         <span>{getItemYear(item)}</span>
                       </div>
-                      <div className="inline-flex items-center">
+                      <div className="inline-flex items-center bg-yellow-50 px-3 py-2 rounded-full border border-yellow-200">
                         <Star className="h-4 w-4 mr-1 fill-yellow-400 text-yellow-400" />
                         <span>{item.vote_average ? item.vote_average.toFixed(1) : 'N/A'}</span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex-shrink-0 w-full sm:w-auto sm:ml-4">
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border-2 border-green-200 shadow-sm sm:min-w-[140px]">
-                      <div className="text-center">
-                        <div className="text-xs font-medium text-green-700 mb-1">
-                          {item.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'}
+                    {/* Modern Payment Type Selection */}
+                    <div className="mt-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
+                      <div className="flex flex-col space-y-3">
+                        <div className="flex items-center justify-center sm:justify-start">
+                          <span className="text-sm font-bold text-gray-800 mr-3">💳 Método de Pago:</span>
                         </div>
-                        <div className="text-base sm:text-lg font-bold text-green-800">
-                          ${calculateItemPrice(item).toLocaleString()} CUP
+                        <div className="flex justify-center sm:justify-start space-x-3">
+                          <button
+                            onClick={() => updatePaymentType(item.id, 'cash')}
+                            className={`relative px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 transform hover:scale-105 ${
+                              item.paymentType === 'cash'
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg scale-105'
+                                : 'bg-white text-gray-600 hover:bg-green-50 border-2 border-gray-200 hover:border-green-300'
+                            }`}
+                          >
+                            {item.paymentType === 'cash' && (
+                              <div className="absolute -top-1 -right-1 bg-green-400 text-white p-1 rounded-full">
+                                <Check className="h-3 w-3" />
+                              </div>
+                            )}
+                            <DollarSign className="h-4 w-4 inline mr-2" />
+                            Efectivo
+                            {item.paymentType === 'cash' && (
+                              <Sparkles className="h-3 w-3 inline ml-2 animate-pulse" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => updatePaymentType(item.id, 'transfer')}
+                            className={`relative px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 transform hover:scale-105 ${
+                              item.paymentType === 'transfer'
+                                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg scale-105'
+                                : 'bg-white text-gray-600 hover:bg-orange-50 border-2 border-gray-200 hover:border-orange-300'
+                            }`}
+                          >
+                            {item.paymentType === 'transfer' && (
+                              <div className="absolute -top-1 -right-1 bg-orange-400 text-white p-1 rounded-full">
+                                <Check className="h-3 w-3" />
+                              </div>
+                            )}
+                            <CreditCard className="h-4 w-4 inline mr-2" />
+                            Transferencia
+                            <span className="ml-1 text-xs opacity-90">
+                              (+{adminContext?.state?.prices?.transferFeePercentage || 10}%)
+                            </span>
+                            {item.paymentType === 'transfer' && (
+                              <Zap className="h-3 w-3 inline ml-2 animate-pulse" />
+                            )}
+                          </button>
                         </div>
-                        {item.paymentType === 'transfer' && (
-                          <div className="text-xs text-orange-600 mt-1">
-                            +10% incluido
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex-shrink-0 flex items-center justify-center sm:justify-start space-x-2 mt-2 sm:mt-0">
-                    {item.type === 'tv' && (
-                      <Link
-                        to={getItemUrl(item)}
-                        className="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-full transition-colors touch-manipulation"
-                        title="Editar temporadas"
+                  <div className="flex-shrink-0 w-full sm:w-auto sm:ml-4 space-y-3">
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 border-2 border-green-200 shadow-lg sm:min-w-[160px] transform hover:scale-105 transition-all duration-300">
+                      <div className="text-center">
+                        <div className="text-sm font-bold text-green-700 mb-2 flex items-center justify-center">
+                          {item.paymentType === 'cash' ? (
+                            <DollarSign className="h-4 w-4 mr-1" />
+                          ) : (
+                            <CreditCard className="h-4 w-4 mr-1" />
+                          )}
+                          {item.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'}
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black text-green-800 mb-1">
+                          ${calculateItemPrice(item).toLocaleString()} CUP
+                        </div>
+                        {item.paymentType === 'transfer' && (
+                          <div className="text-xs text-orange-600 font-semibold bg-orange-100 px-2 py-1 rounded-full">
+                            +{adminContext?.state?.prices?.transferFeePercentage || 10}% incluido
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-center space-x-2">
+                      {item.type === 'tv' && (
+                        <Link
+                          to={getItemUrl(item)}
+                          className="p-3 text-purple-600 hover:text-white hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 bg-purple-50 rounded-xl transition-all duration-300 transform hover:scale-110 shadow-md hover:shadow-lg"
+                          title="Editar temporadas"
+                        >
+                          <Edit3 className="h-5 w-5" />
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="p-3 text-red-600 hover:text-white hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 bg-red-50 rounded-xl transition-all duration-300 transform hover:scale-110 shadow-md hover:shadow-lg"
+                        title="Eliminar del carrito"
                       >
-                        <Edit3 className="h-4 w-4" />
-                      </Link>
-                    )}
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors touch-manipulation"
-                      title="Eliminar del carrito"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

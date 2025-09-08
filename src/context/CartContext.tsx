@@ -1,31 +1,13 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { Toast } from '../components/Toast';
-import { AdminContext } from './AdminContext';
 import type { CartItem } from '../types/movie';
 
-// Listen for admin state changes
-const useAdminSync = () => {
-  const [syncTimestamp, setSyncTimestamp] = React.useState(Date.now());
-  
-  React.useEffect(() => {
-    const handleAdminChange = (event: CustomEvent) => {
-      setSyncTimestamp(Date.now());
-    };
-    
-    const handleFullSync = (event: CustomEvent) => {
-      setSyncTimestamp(Date.now());
-    };
-    
-    window.addEventListener('admin_state_change', handleAdminChange as EventListener);
-    window.addEventListener('admin_full_sync', handleFullSync as EventListener);
-    
-    return () => {
-      window.removeEventListener('admin_state_change', handleAdminChange as EventListener);
-      window.removeEventListener('admin_full_sync', handleFullSync as EventListener);
-    };
-  }, []);
-  
-  return syncTimestamp;
+// PRECIOS EMBEBIDOS - Generados automáticamente
+const EMBEDDED_PRICES = {
+  "moviePrice": 80,
+  "seriesPrice": 300,
+  "transferFeePercentage": 10,
+  "novelPricePerChapter": 5
 };
 
 interface SeriesCartItem extends CartItem {
@@ -115,8 +97,6 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0 });
-  const adminContext = React.useContext(AdminContext);
-  const syncTimestamp = useAdminSync(); // Real-time sync
   const [toast, setToast] = React.useState<{
     message: string;
     type: 'success' | 'error';
@@ -225,10 +205,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const calculateItemPrice = (item: SeriesCartItem): number => {
-    // Get current prices from admin context with real-time updates
-    const moviePrice = adminContext?.state?.prices?.moviePrice || 80;
-    const seriesPrice = adminContext?.state?.prices?.seriesPrice || 300;
-    const transferFeePercentage = adminContext?.state?.prices?.transferFeePercentage || 10;
+    // Use embedded prices
+    const moviePrice = EMBEDDED_PRICES.moviePrice;
+    const seriesPrice = EMBEDDED_PRICES.seriesPrice;
+    const transferFeePercentage = EMBEDDED_PRICES.transferFeePercentage;
     
     if (item.type === 'movie') {
       const basePrice = moviePrice;
@@ -247,9 +227,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const calculateTotalByPaymentType = (): { cash: number; transfer: number } => {
-    const moviePrice = adminContext?.state?.prices?.moviePrice || 80;
-    const seriesPrice = adminContext?.state?.prices?.seriesPrice || 300;
-    const transferFeePercentage = adminContext?.state?.prices?.transferFeePercentage || 10;
+    const moviePrice = EMBEDDED_PRICES.moviePrice;
+    const seriesPrice = EMBEDDED_PRICES.seriesPrice;
+    const transferFeePercentage = EMBEDDED_PRICES.transferFeePercentage;
     
     return state.items.reduce((totals, item) => {
       const basePrice = item.type === 'movie' ? moviePrice : (item.selectedSeasons?.length || 1) * seriesPrice;
