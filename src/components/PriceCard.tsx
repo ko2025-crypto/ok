@@ -49,15 +49,15 @@ export function PriceCard({ type, selectedSeasons = [], episodeCount = 0, isAnim
   };
 
   return (
-    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border-2 border-green-200 shadow-lg">
+    <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-2xl p-6 border-2 border-green-300 shadow-xl transform hover:scale-105 transition-all duration-300">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center">
-          <div className="bg-green-100 p-2 rounded-lg mr-3 shadow-sm">
-            <span className="text-lg">{getIcon()}</span>
+          <div className="bg-gradient-to-r from-green-400 to-emerald-400 p-3 rounded-xl mr-4 shadow-lg">
+            <span className="text-2xl">{getIcon()}</span>
           </div>
           <div>
-            <h3 className="font-bold text-green-800 text-sm">{getTypeLabel()}</h3>
-            <p className="text-green-600 text-xs">
+            <h3 className="font-black text-green-800 text-lg">{getTypeLabel()}</h3>
+            <p className="text-green-600 text-sm font-semibold">
               {type === 'tv' && selectedSeasons.length > 0 
                 ? `${selectedSeasons.length} temporada${selectedSeasons.length > 1 ? 's' : ''}`
                 : 'Contenido completo'
@@ -65,43 +65,47 @@ export function PriceCard({ type, selectedSeasons = [], episodeCount = 0, isAnim
             </p>
           </div>
         </div>
-        <div className="bg-green-500 text-white p-2 rounded-full shadow-md">
+        <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-3 rounded-full shadow-lg animate-pulse">
           <DollarSign className="h-4 w-4" />
         </div>
       </div>
       
       <div className="space-y-3">
         {/* Cash Price */}
-        <div className="bg-white rounded-lg p-3 border border-green-200">
+        <div className="bg-gradient-to-r from-white to-green-50 rounded-xl p-4 border-2 border-green-200 shadow-md hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-green-700 flex items-center">
-              <DollarSign className="h-3 w-3 mr-1" />
+            <span className="text-sm font-bold text-green-700 flex items-center">
+              <div className="bg-green-100 p-1 rounded-lg mr-2">
+                <DollarSign className="h-4 w-4" />
+              </div>
               Efectivo
             </span>
-            <span className="text-lg font-bold text-green-700">
+            <span className="text-xl font-black text-green-700">
               $${price.toLocaleString()} CUP
             </span>
           </div>
         </div>
         
         {/* Transfer Price */}
-        <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4 border-2 border-orange-200 shadow-md hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-orange-700 flex items-center">
-              <CreditCard className="h-3 w-3 mr-1" />
+            <span className="text-sm font-bold text-orange-700 flex items-center">
+              <div className="bg-orange-100 p-1 rounded-lg mr-2">
+                <CreditCard className="h-4 w-4" />
+              </div>
               Transferencia
             </span>
-            <span className="text-lg font-bold text-orange-700">
+            <span className="text-xl font-black text-orange-700">
               $${transferPrice.toLocaleString()} CUP
             </span>
           </div>
-          <div className="text-xs text-orange-600">
+          <div className="text-sm text-orange-600 font-semibold bg-orange-100 px-2 py-1 rounded-full text-center">
             +${transferFeePercentage}% recargo bancario
           </div>
         </div>
         
         {type === 'tv' && selectedSeasons.length > 0 && (
-          <div className="text-xs text-green-600 text-center bg-green-100 rounded-lg p-2">
+          <div className="text-sm text-green-600 font-bold text-center bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl p-3 border border-green-200">
             $${(price / selectedSeasons.length).toLocaleString()} CUP por temporada (efectivo)
           </div>
         )}

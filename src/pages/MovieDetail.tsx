@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Star, Calendar, Clock, Plus, X, Play, Film, Globe, DollarSign, TrendingUp, Users, Building, Sparkles, Heart, Zap, FileText, Info } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Clock, Plus, X, Play, Film, Globe, DollarSign, TrendingUp, Users, Building, Sparkles, Heart, Zap } from 'lucide-react';
 import { tmdbService } from '../services/tmdb';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { PriceCard } from '../components/PriceCard';
@@ -184,7 +184,7 @@ export function MovieDetail() {
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 p-8 mb-8 transform hover:scale-[1.02] transition-all duration-300">
               <div className="flex items-center mb-6">
                 <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-3 rounded-xl mr-4 shadow-lg">
-                  <FileText className="h-6 w-6 text-white" />
+                  <span className="text-2xl">📚</span>
                 </div>
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   Sinopsis
@@ -271,7 +271,7 @@ export function MovieDetail() {
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
                 <h3 className="text-xl font-bold flex items-center">
                   <div className="bg-white/20 p-2 rounded-lg mr-3">
-                    <Info className="h-6 w-6" />
+                    <span className="text-lg">🎬</span>
                   </div>
                   Detalles de la Película
                 </h3>
@@ -326,6 +326,10 @@ export function MovieDetail() {
                     <Star className="h-4 w-4" />
                   </div>
                 )}
+              </div>
+
+
+
               </div>
 
               {/* Price Card */}
@@ -384,9 +388,6 @@ export function MovieDetail() {
                       ? `$${movie.revenue.toLocaleString()}`
                       : 'No disponible'
                     }
-                  </p>
-                </div>
-                
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-pink-200 transition-colors">
                   <div className="flex items-center mb-2">
                     <div className="bg-pink-100 p-2 rounded-lg mr-3 shadow-sm">
@@ -398,7 +399,7 @@ export function MovieDetail() {
                     {movie.vote_count.toLocaleString()} votos
                   </p>
                 </div>
-
+                  </p>
                 {movie.production_companies.length > 0 && (
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-indigo-200 transition-colors">
                     <div className="flex items-center mb-3">
@@ -418,7 +419,7 @@ export function MovieDetail() {
                     </div>
                   </div>
                 )}
-
+                </div>
                 {movie.production_countries.length > 0 && (
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-orange-200 transition-colors">
                     <div className="flex items-center mb-3">
@@ -443,6 +444,5 @@ export function MovieDetail() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

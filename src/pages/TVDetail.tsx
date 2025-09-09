@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Star, Calendar, Tv, Plus, X, Play, ChevronDown, Monitor, Rocket, Film, Clock2, Globe, Users, Building, MapPin, Sparkles, Heart, Zap, Check, FileText, Info } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Tv, Plus, X, Play, ChevronDown, Monitor, Rocket, Film, Clock2, Globe, Users, Building, MapPin, Sparkles, Heart, Zap, Check } from 'lucide-react';
 import { tmdbService } from '../services/tmdb';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { PriceCard } from '../components/PriceCard';
@@ -263,7 +263,7 @@ export function TVDetail() {
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 p-8 mb-8 transform hover:scale-[1.02] transition-all duration-300">
               <div className="flex items-center mb-6">
                 <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-3 rounded-xl mr-4 shadow-lg">
-                  <FileText className="h-6 w-6 text-white" />
+                  <span className="text-2xl">📚</span>
                 </div>
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                   Sinopsis
@@ -350,7 +350,7 @@ export function TVDetail() {
               <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
                 <h3 className="text-xl font-bold flex items-center">
                   <div className="bg-white/20 p-2 rounded-lg mr-3">
-                    <Info className="h-6 w-6" />
+                    <span className="text-lg">📺</span>
                   </div>
                   Detalles de la Serie
                 </h3>

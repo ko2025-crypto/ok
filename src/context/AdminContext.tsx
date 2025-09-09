@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 // CONFIGURACIÓN EMBEBIDA - Generada automáticamente
 const EMBEDDED_CONFIG = {
   "version": "2.1.0",
-  "lastExport": "2025-09-08T16:40:06.327Z",
+  "lastExport": "2025-09-05T08:44:06.529Z",
   "prices": {
     "moviePrice": 80,
     "seriesPrice": 300,
@@ -12,18 +12,7 @@ const EMBEDDED_CONFIG = {
     "novelPricePerChapter": 5
   },
   "deliveryZones": [],
-  "novels": [
-    {
-      "titulo": "aguas mansas",
-      "genero": "drama",
-      "capitulos": 10,
-      "año": 2025,
-      "descripcion": "",
-      "id": 1757349568080,
-      "createdAt": "2025-09-08T16:39:28.080Z",
-      "updatedAt": "2025-09-08T16:39:28.080Z"
-    }
-  ],
+  "novels": [],
   "settings": {
     "autoSync": true,
     "syncInterval": 300000,
