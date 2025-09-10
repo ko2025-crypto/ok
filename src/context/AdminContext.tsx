@@ -470,12 +470,43 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Real-time sync listener
   useEffect(() => {
     const unsubscribe = syncService.subscribe((syncedState) => {
-      if (JSON.stringify(syncedState) !== JSON.stringify(state)) {
+      if (syncedState && JSON.stringify(syncedState) !== JSON.stringify(state)) {
         dispatch({ type: 'SYNC_STATE', payload: syncedState });
       }
     });
     return unsubscribe;
   }, [syncService, state]);
+
+  // Listen for admin state changes from other tabs/windows
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'admin_system_state' && event.newValue) {
+        try {
+          const newState = JSON.parse(event.newValue);
+          if (JSON.stringify(newState) !== JSON.stringify(state)) {
+            dispatch({ type: 'SYNC_STATE', payload: newState });
+          }
+        } catch (error) {
+          console.error('Error parsing admin state from storage:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [state]);
+
+  // Broadcast changes to other components
+  useEffect(() => {
+    const handleAdminChange = () => {
+      // Force re-render of components that depend on admin state
+      window.dispatchEvent(new CustomEvent('adminStateChanged', { 
+        detail: state 
+      }));
+    };
+
+    handleAdminChange();
+  }, [state.prices, state.deliveryZones, state.novels]);
 
   useEffect(() => {
     return () => {
