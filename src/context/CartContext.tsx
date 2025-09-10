@@ -10,6 +10,14 @@ const EMBEDDED_PRICES = {
   "novelPricePerChapter": 5
 };
 
+// PRECIOS EMBEBIDOS - Generados automáticamente
+const EMBEDDED_PRICES = {
+  "moviePrice": 80,
+  "seriesPrice": 300,
+  "transferFeePercentage": 10,
+  "novelPricePerChapter": 5
+};
+
 interface SeriesCartItem extends CartItem {
   selectedSeasons?: number[];
   paymentType?: 'cash' | 'transfer';
