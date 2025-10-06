@@ -87,14 +87,26 @@ export function Home() {
     };
     return flags[country] || '🌍';
   };
+  // Listen to admin state changes for real-time updates
+  useEffect(() => {
+    const handleAdminStateChange = () => {
+      const novelTrending = getNovelTrendingContent(trendingTimeWindow);
+      setNovelTrendingContent(novelTrending);
+      setLastUpdate(new Date());
+    };
+
+    window.addEventListener('admin_state_change', handleAdminStateChange);
+    return () => window.removeEventListener('admin_state_change', handleAdminStateChange);
+  }, [trendingTimeWindow, adminState.novels]);
+
   const fetchAllContent = async () => {
     try {
       setLoading(true);
-      
+
       // Get hero content first (no duplicates)
       const heroContent = await tmdbService.getHeroContent();
       setHeroItems(heroContent);
-      
+
       // Get trending content
       const trendingResponse = await tmdbService.getTrendingAll(trendingTimeWindow, 1);
       const uniqueTrending = tmdbService.removeDuplicates(trendingResponse.results);

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { realtimeSyncService, Novela as NovelaSupa } from '../services/realtimeSync';
 
 interface Novel {
   id: number;
@@ -252,14 +253,44 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     'Rusia'
   ];
 
-  // Load state from localStorage on mount
+  // Load state from Supabase on mount
   useEffect(() => {
-    const loadState = () => {
+    const loadState = async () => {
       try {
+        const [novelas] = await Promise.all([
+          realtimeSyncService.getNovelas(),
+        ]);
+
+        const mappedNovels: Novel[] = novelas.map(n => ({
+          id: parseInt(n.id.split('-').join('').substring(0, 13)),
+          titulo: n.title,
+          genero: n.genre,
+          capitulos: n.episodes,
+          año: n.year,
+          descripcion: n.description,
+          imagen: n.image_url,
+          estado: n.status === 'streaming' ? 'transmision' : 'finalizada',
+          createdAt: n.created_at,
+          updatedAt: n.updated_at,
+        }));
+
+        dispatch({
+          type: 'LOAD_STATE',
+          payload: {
+            novels: mappedNovels,
+          }
+        });
+
         const savedState = localStorage.getItem('admin_system_state');
         if (savedState) {
           const parsedState = JSON.parse(savedState);
-          dispatch({ type: 'LOAD_STATE', payload: parsedState });
+          dispatch({
+            type: 'LOAD_STATE',
+            payload: {
+              ...parsedState,
+              novels: mappedNovels,
+            }
+          });
         }
       } catch (error) {
         console.error('Error loading admin state:', error);
@@ -301,19 +332,61 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state]);
 
-  // Real-time sync with other components
+  // Real-time sync with Supabase
+  useEffect(() => {
+    const unsubscribeNovelas = realtimeSyncService.subscribeToNovelas((payload) => {
+      if (payload.eventType === 'INSERT' && payload.new) {
+        const novel: Novel = {
+          id: parseInt(payload.new.id.split('-').join('').substring(0, 13)),
+          titulo: payload.new.title,
+          genero: payload.new.genre,
+          capitulos: payload.new.episodes,
+          año: payload.new.year,
+          descripcion: payload.new.description,
+          imagen: payload.new.image_url,
+          estado: payload.new.status === 'streaming' ? 'transmision' : 'finalizada',
+          createdAt: payload.new.created_at,
+          updatedAt: payload.new.updated_at,
+        };
+        dispatch({ type: 'ADD_NOVEL', payload: novel });
+      } else if (payload.eventType === 'UPDATE' && payload.new) {
+        const novel: Novel = {
+          id: parseInt(payload.new.id.split('-').join('').substring(0, 13)),
+          titulo: payload.new.title,
+          genero: payload.new.genre,
+          capitulos: payload.new.episodes,
+          año: payload.new.year,
+          descripcion: payload.new.description,
+          imagen: payload.new.image_url,
+          estado: payload.new.status === 'streaming' ? 'transmision' : 'finalizada',
+          createdAt: payload.new.created_at,
+          updatedAt: payload.new.updated_at,
+        };
+        dispatch({ type: 'UPDATE_NOVEL', payload: novel });
+      } else if (payload.eventType === 'DELETE' && payload.old) {
+        const id = parseInt(payload.old.id.split('-').join('').substring(0, 13));
+        dispatch({ type: 'DELETE_NOVEL', payload: id });
+      }
+    });
+
+    return () => {
+      unsubscribeNovelas();
+    };
+  }, []);
+
+  // Sync status update
   useEffect(() => {
     const syncInterval = setInterval(() => {
       if (state.syncStatus.pendingChanges > 0) {
-        dispatch({ 
-          type: 'UPDATE_SYNC_STATUS', 
-          payload: { 
+        dispatch({
+          type: 'UPDATE_SYNC_STATUS',
+          payload: {
             lastSync: new Date().toISOString(),
             pendingChanges: 0
           }
         });
       }
-    }, 5000); // Sync every 5 seconds
+    }, 5000);
 
     return () => clearInterval(syncInterval);
   }, [state.syncStatus.pendingChanges]);
@@ -335,62 +408,73 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     addNotification('Sesión cerrada', 'info');
   };
 
-  const addNovel = (novelData: Omit<Novel, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const novel: Novel = {
-      ...novelData,
-      id: Date.now(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    dispatch({ type: 'ADD_NOVEL', payload: novel });
-    addNotification(`Novela "${novel.titulo}" agregada correctamente`, 'success');
-    
-    // Emit specific event for novel addition
-    const event = new CustomEvent('admin_state_change', {
-      detail: { 
-        type: 'novel_add',
-        data: novel,
-        timestamp: new Date().toISOString()
-      }
-    });
-    window.dispatchEvent(event);
-  };
+  const addNovel = async (novelData: Omit<Novel, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const novelaSupa: Omit<NovelaSupa, 'id' | 'created_at' | 'updated_at'> = {
+        title: novelData.titulo,
+        description: novelData.descripcion || '',
+        image_url: novelData.imagen || '',
+        status: novelData.estado === 'transmision' ? 'streaming' : 'finished',
+        episodes: novelData.capitulos,
+        genre: novelData.genero,
+        year: novelData.año,
+      };
 
-  const updateNovel = (novel: Novel) => {
-    const updatedNovel = {
-      ...novel,
-      updatedAt: new Date().toISOString(),
-    };
-    dispatch({ type: 'UPDATE_NOVEL', payload: updatedNovel });
-    addNotification(`Novela "${novel.titulo}" actualizada correctamente`, 'success');
-    
-    // Emit specific event for novel update
-    const event = new CustomEvent('admin_state_change', {
-      detail: { 
-        type: 'novel_update',
-        data: updatedNovel,
-        timestamp: new Date().toISOString()
-      }
-    });
-    window.dispatchEvent(event);
-  };
-
-  const deleteNovel = (id: number) => {
-    const novel = state.novels.find(n => n.id === id);
-    dispatch({ type: 'DELETE_NOVEL', payload: id });
-    if (novel) {
-      addNotification(`Novela "${novel.titulo}" eliminada`, 'info');
+      await realtimeSyncService.addNovela(novelaSupa);
+      addNotification(`Novela "${novelData.titulo}" agregada correctamente`, 'success');
+    } catch (error) {
+      console.error('Error adding novel:', error);
+      addNotification('Error al agregar novela', 'error');
     }
-    
-    // Emit specific event for novel deletion
-    const event = new CustomEvent('admin_state_change', {
-      detail: { 
-        type: 'novel_delete',
-        data: { id },
-        timestamp: new Date().toISOString()
+  };
+
+  const updateNovel = async (novel: Novel) => {
+    try {
+      const novelId = novel.id.toString().padStart(32, '0');
+      const updates = {
+        title: novel.titulo,
+        description: novel.descripcion || '',
+        image_url: novel.imagen || '',
+        status: novel.estado === 'transmision' ? 'streaming' : 'finished',
+        episodes: novel.capitulos,
+        genre: novel.genero,
+        year: novel.año,
+      };
+
+      const novels = await realtimeSyncService.getNovelas();
+      const existingNovel = novels.find(n =>
+        parseInt(n.id.split('-').join('').substring(0, 13)) === novel.id
+      );
+
+      if (existingNovel) {
+        await realtimeSyncService.updateNovela(existingNovel.id, updates);
+        addNotification(`Novela "${novel.titulo}" actualizada correctamente`, 'success');
       }
-    });
-    window.dispatchEvent(event);
+    } catch (error) {
+      console.error('Error updating novel:', error);
+      addNotification('Error al actualizar novela', 'error');
+    }
+  };
+
+  const deleteNovel = async (id: number) => {
+    try {
+      const novel = state.novels.find(n => n.id === id);
+
+      const novels = await realtimeSyncService.getNovelas();
+      const existingNovel = novels.find(n =>
+        parseInt(n.id.split('-').join('').substring(0, 13)) === id
+      );
+
+      if (existingNovel) {
+        await realtimeSyncService.deleteNovela(existingNovel.id);
+        if (novel) {
+          addNotification(`Novela "${novel.titulo}" eliminada`, 'info');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting novel:', error);
+      addNotification('Error al eliminar novela', 'error');
+    }
   };
 
   const addDeliveryZone = (zoneData: Omit<DeliveryZone, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -492,54 +576,84 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     addNotification('Configuración del sistema actualizada', 'success');
   };
 
-  const exportSystemConfig = (): string => {
-    const exportData = {
-      version: state.systemConfig.version,
-      exportDate: new Date().toISOString(),
-      prices: state.prices,
-      deliveryZones: state.deliveryZones,
-      novels: state.novels,
-      systemConfig: state.systemConfig,
-      notifications: state.notifications,
-      syncStatus: state.syncStatus
-    };
-    return JSON.stringify(exportData, null, 2);
+  const exportSystemConfig = async (): Promise<string> => {
+    try {
+      const fullBackup = await realtimeSyncService.exportFullBackup();
+
+      const exportData = {
+        ...fullBackup,
+        localState: {
+          prices: state.prices,
+          deliveryZones: state.deliveryZones,
+          systemConfig: state.systemConfig,
+          notifications: state.notifications,
+          syncStatus: state.syncStatus
+        }
+      };
+
+      return JSON.stringify(exportData, null, 2);
+    } catch (error) {
+      console.error('Error exporting system config:', error);
+      const localExport = {
+        version: state.systemConfig.version,
+        exportDate: new Date().toISOString(),
+        prices: state.prices,
+        deliveryZones: state.deliveryZones,
+        novels: state.novels,
+        systemConfig: state.systemConfig,
+        notifications: state.notifications,
+        syncStatus: state.syncStatus
+      };
+      return JSON.stringify(localExport, null, 2);
+    }
   };
 
-  const importSystemConfig = (configJson: string): boolean => {
+  const importSystemConfig = async (configJson: string): Promise<boolean> => {
     try {
       const config = JSON.parse(configJson);
-      
-      // Validate config structure
-      if (!config.prices || !config.deliveryZones || !config.novels) {
-        throw new Error('Configuración inválida');
+
+      if (config.data) {
+        await realtimeSyncService.importFullBackup(config);
       }
-      
-      dispatch({ 
-        type: 'LOAD_STATE', 
-        payload: {
-          prices: config.prices,
-          deliveryZones: config.deliveryZones,
-          novels: config.novels,
-          systemConfig: config.systemConfig || state.systemConfig,
-          notifications: config.notifications || [],
-          syncStatus: config.syncStatus || state.syncStatus
-        }
-      });
-      
+
+      if (config.localState) {
+        dispatch({
+          type: 'LOAD_STATE',
+          payload: {
+            prices: config.localState.prices || state.prices,
+            deliveryZones: config.localState.deliveryZones || state.deliveryZones,
+            systemConfig: config.localState.systemConfig || state.systemConfig,
+            notifications: config.localState.notifications || [],
+            syncStatus: config.localState.syncStatus || state.syncStatus
+          }
+        });
+      } else if (config.prices && config.deliveryZones) {
+        dispatch({
+          type: 'LOAD_STATE',
+          payload: {
+            prices: config.prices,
+            deliveryZones: config.deliveryZones,
+            novels: config.novels || state.novels,
+            systemConfig: config.systemConfig || state.systemConfig,
+            notifications: config.notifications || [],
+            syncStatus: config.syncStatus || state.syncStatus
+          }
+        });
+      }
+
       addNotification('Configuración importada correctamente', 'success');
-      
-      // Emit full sync event
+
       const event = new CustomEvent('admin_full_sync', {
-        detail: { 
+        detail: {
           config: config,
           timestamp: new Date().toISOString()
         }
       });
       window.dispatchEvent(event);
-      
+
       return true;
     } catch (error) {
+      console.error('Error importing config:', error);
       addNotification('Error al importar configuración', 'error');
       return false;
     }

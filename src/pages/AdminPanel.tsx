@@ -200,30 +200,40 @@ export function AdminPanel() {
     addNotification('Precios actualizados correctamente', 'success');
   };
 
-  const handleExport = () => {
-    const config = exportSystemConfig();
-    const blob = new Blob([config], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `tv-a-la-carta-config-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    addNotification('Configuración exportada correctamente', 'success');
+  const handleExport = async () => {
+    try {
+      const config = await exportSystemConfig();
+      const blob = new Blob([config], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `tv-a-la-carta-config-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      addNotification('Configuración exportada correctamente', 'success');
+    } catch (error) {
+      console.error('Error exporting config:', error);
+      addNotification('Error al exportar configuración', 'error');
+    }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!importData.trim()) {
       addNotification('Por favor pega la configuración a importar', 'error');
       return;
     }
 
-    const success = importSystemConfig(importData);
-    if (success) {
-      setImportData('');
-      setShowImportModal(false);
+    try {
+      const success = await importSystemConfig(importData);
+      if (success) {
+        setImportData('');
+        setShowImportModal(false);
+      }
+    } catch (error) {
+      console.error('Error importing config:', error);
+      addNotification('Error al importar configuración', 'error');
     }
   };
 
@@ -231,13 +241,11 @@ export function AdminPanel() {
     try {
       addNotification('Generando backup completo del sistema...', 'info');
 
+      const fullBackup = await exportSystemConfig();
+      const backupData = JSON.parse(fullBackup);
+
       const fullSystemConfig = {
-        version: state.systemConfig.version,
-        prices: state.prices,
-        deliveryZones: state.deliveryZones,
-        novels: state.novels,
-        settings: state.systemConfig,
-        syncStatus: state.syncStatus,
+        ...backupData,
         exportDate: new Date().toISOString(),
       };
 

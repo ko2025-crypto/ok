@@ -3,10 +3,10 @@
 export const generateSystemReadme = (adminState: any) => `# TV a la Carta - Sistema de Gestión
 
 ## Descripción
-Sistema completo de gestión para TV a la Carta con panel de administración, carrito de compras y sincronización en tiempo real.
+Sistema completo de gestión para TV a la Carta con panel de administración, carrito de compras y sincronización en tiempo real con Supabase.
 
 ## Versión
-${adminState.systemConfig?.version || '2.1.0'}
+${adminState.version || adminState.systemConfig?.version || '2.1.0'}
 
 ## Última Exportación
 ${new Date().toISOString()}
@@ -14,28 +14,40 @@ ${new Date().toISOString()}
 ## Configuración Actual
 
 ### Precios
-- Películas: $${adminState.prices?.moviePrice || 80} CUP
-- Series: $${adminState.prices?.seriesPrice || 300} CUP por temporada
-- Recargo transferencia: ${adminState.prices?.transferFeePercentage || 10}%
-- Novelas: $${adminState.prices?.novelPricePerChapter || 5} CUP por capítulo
+- Películas: $${adminState.localState?.prices?.moviePrice || adminState.prices?.moviePrice || 80} CUP
+- Series: $${adminState.localState?.prices?.seriesPrice || adminState.prices?.seriesPrice || 300} CUP por temporada
+- Recargo transferencia: ${adminState.localState?.prices?.transferFeePercentage || adminState.prices?.transferFeePercentage || 10}%
+- Novelas: $${adminState.localState?.prices?.novelPricePerChapter || adminState.prices?.novelPricePerChapter || 5} CUP por capítulo
 
 ### Zonas de Entrega
-Total configuradas: ${adminState.deliveryZones?.length || 0}
+Total configuradas: ${adminState.localState?.deliveryZones?.length || adminState.deliveryZones?.length || 0}
 
 ### Novelas Administradas
-Total: ${adminState.novels?.length || 0}
+Total en base de datos: ${adminState.data?.novelas?.length || 0}
+Total en caché local: ${adminState.localState?.novels?.length || adminState.novels?.length || 0}
+
+### Contenido en Base de Datos
+- Novelas: ${adminState.data?.novelas?.length || 0}
+- Películas: ${adminState.data?.movies?.length || 0}
+- Series TV: ${adminState.data?.tv_shows?.length || 0}
+- Anime: ${adminState.data?.anime?.length || 0}
+- Items del Carrusel: ${adminState.data?.carousel_items?.length || 0}
+- Configuraciones: ${adminState.data?.app_settings?.length || 0}
 
 ## Características
 - ✅ Panel de administración completo
-- ✅ Sincronización en tiempo real
+- ✅ Sincronización en tiempo real con Supabase
+- ✅ Base de datos PostgreSQL en la nube
 - ✅ Gestión de precios dinámicos
 - ✅ Zonas de entrega personalizables
 - ✅ Catálogo de novelas administrable
 - ✅ Sistema de notificaciones
-- ✅ Exportación/Importación de configuración
+- ✅ Exportación/Importación de configuración completa
+- ✅ Backup full automático
 - ✅ Optimización de rendimiento
 - ✅ Carrito de compras avanzado
 - ✅ Integración con WhatsApp
+- ✅ Real-time updates (cambios instantáneos)
 
 ## Instalación
 \`\`\`bash
@@ -48,6 +60,13 @@ npm run dev
 2. Usuario: admin
 3. Contraseña: admin123
 
+## Sincronización en Tiempo Real
+El sistema utiliza Supabase Realtime para sincronizar todos los cambios:
+- Cuando se agrega una novela en el panel, aparece instantáneamente en el inicio
+- Las modificaciones en precios se reflejan inmediatamente en toda la aplicación
+- Los cambios en zonas de entrega se actualizan en tiempo real
+- El backup full incluye toda la configuración de la base de datos
+
 ## Tecnologías
 - React 18
 - TypeScript
@@ -56,6 +75,8 @@ npm run dev
 - React Router
 - Lucide Icons
 - JSZip
+- Supabase (Base de datos + Realtime)
+- PostgreSQL
 
 ## Contacto
 WhatsApp: +5354690878
@@ -63,38 +84,41 @@ WhatsApp: +5354690878
 
 export const generateSystemConfig = (adminState: any) => {
   const config = {
-    version: adminState.systemConfig?.version || '2.1.0',
+    version: adminState.version || adminState.systemConfig?.version || '2.1.0',
     lastExport: new Date().toISOString(),
     exportedBy: 'TV a la Carta Admin Panel',
-    prices: adminState.prices || {
-      moviePrice: 80,
-      seriesPrice: 300,
-      transferFeePercentage: 10,
-      novelPricePerChapter: 5,
-    },
-    deliveryZones: adminState.deliveryZones || [],
-    novels: adminState.novels || [],
-    settings: adminState.systemConfig?.settings || {
-      autoSync: true,
-      syncInterval: 300000,
-      enableNotifications: true,
-      maxNotifications: 100,
-    },
-    metadata: {
-      totalOrders: adminState.systemConfig?.metadata?.totalOrders || 0,
-      totalRevenue: adminState.systemConfig?.metadata?.totalRevenue || 0,
-      lastOrderDate: adminState.systemConfig?.metadata?.lastOrderDate || '',
-      systemUptime: adminState.systemConfig?.metadata?.systemUptime || new Date().toISOString(),
-      exportTimestamp: new Date().toISOString(),
-    },
-    notifications: adminState.notifications || [],
-    syncStatus: adminState.syncStatus || {
-      lastSync: new Date().toISOString(),
-      isOnline: true,
-      pendingChanges: 0,
+    data: adminState.data || {},
+    localState: {
+      prices: adminState.localState?.prices || adminState.prices || {
+        moviePrice: 80,
+        seriesPrice: 300,
+        transferFeePercentage: 10,
+        novelPricePerChapter: 5,
+      },
+      deliveryZones: adminState.localState?.deliveryZones || adminState.deliveryZones || [],
+      novels: adminState.localState?.novels || adminState.novels || [],
+      settings: adminState.localState?.systemConfig || adminState.systemConfig?.settings || {
+        autoSync: true,
+        syncInterval: 300000,
+        enableNotifications: true,
+        maxNotifications: 100,
+      },
+      metadata: {
+        totalOrders: adminState.localState?.systemConfig?.metadata?.totalOrders || 0,
+        totalRevenue: adminState.localState?.systemConfig?.metadata?.totalRevenue || 0,
+        lastOrderDate: adminState.localState?.systemConfig?.metadata?.lastOrderDate || '',
+        systemUptime: adminState.localState?.systemConfig?.metadata?.systemUptime || new Date().toISOString(),
+        exportTimestamp: new Date().toISOString(),
+      },
+      notifications: adminState.localState?.notifications || adminState.notifications || [],
+      syncStatus: adminState.localState?.syncStatus || adminState.syncStatus || {
+        lastSync: new Date().toISOString(),
+        isOnline: true,
+        pendingChanges: 0,
+      }
     }
   };
-  
+
   return JSON.stringify(config, null, 2);
 };
 
