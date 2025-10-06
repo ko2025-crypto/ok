@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Calendar, Plus, Check, Eye, ShoppingCart, Play, Info } from 'lucide-react';
+import { Star, Calendar, Plus, Check, Eye, ShoppingCart, Play, Info, CheckCircle } from 'lucide-react';
 import { OptimizedImage } from './OptimizedImage';
 import { useCart } from '../context/CartContext';
-import { CartAnimation } from './CartAnimation';
+import { Toast } from './Toast';
 import { IMAGE_BASE_URL, POSTER_SIZE } from '../config/api';
 import type { Movie, TVShow, CartItem } from '../types/movie';
 
@@ -14,7 +14,8 @@ interface MovieCardProps {
 
 export function MovieCard({ item, type }: MovieCardProps) {
   const { addItem, removeItem, isInCart } = useCart();
-  const [showAnimation, setShowAnimation] = React.useState(false);
+  const [showToast, setShowToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState('');
   const [isHovered, setIsHovered] = React.useState(false);
   const [isAddingToCart, setIsAddingToCart] = React.useState(false);
   
@@ -49,10 +50,14 @@ export function MovieCard({ item, type }: MovieCardProps) {
 
     if (inCart) {
       removeItem(item.id);
+      setToastMessage(`"${title}" retirado del carrito`);
     } else {
       addItem(cartItem);
-      setShowAnimation(true);
+      setToastMessage(`"${title}" agregado al carrito`);
     }
+    
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
   return (
@@ -125,6 +130,28 @@ export function MovieCard({ item, type }: MovieCardProps) {
             {item.overview || 'Sin descripción disponible'}
           </p>
           
+          {/* Episode count information for TV shows with 50+ episodes */}
+          {type === 'tv' && 'number_of_episodes' in item && item.number_of_episodes > 50 && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 shadow-sm">
+              <div className="flex items-center mb-2">
+                <div className="bg-amber-500 p-1.5 rounded-lg mr-2 shadow-sm">
+                  <span className="text-white text-xs font-bold">📊</span>
+                </div>
+                <span className="text-xs font-bold text-amber-800">Serie Extensa</span>
+              </div>
+              <div className="space-y-1 text-xs text-amber-700">
+                <p className="flex items-center">
+                  <span className="text-blue-600 mr-1">📺</span>
+                  <strong>{item.number_of_episodes} episodios</strong>
+                </p>
+                <p className="flex items-center">
+                  <span className="text-green-600 mr-1">💰</span>
+                  <strong>$300 CUP por temporada</strong>
+                </p>
+              </div>
+            </div>
+          )}
+          
           {/* Very subtle progress bar for rating */}
           <div className="w-full bg-gray-200 rounded-full h-1 mb-4 overflow-hidden">
             <div 
@@ -157,6 +184,7 @@ export function MovieCard({ item, type }: MovieCardProps) {
                 <>
                   <Check className="mr-2 h-4 w-4" />
                   <span>En el Carrito</span>
+                  <CheckCircle className="ml-2 h-4 w-4 text-green-300" />
                 </>
               ) : isAddingToCart ? (
                 <>
@@ -184,13 +212,17 @@ export function MovieCard({ item, type }: MovieCardProps) {
         
         {/* Very subtle selection indicator */}
         {inCart && (
-          <div className="absolute top-0 left-0 w-full h-0.5 bg-green-400" />
+          <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full shadow-lg">
+            <CheckCircle className="h-4 w-4" />
+          </div>
         )}
       </div>
       
-      <CartAnimation 
-        show={showAnimation} 
-        onComplete={() => setShowAnimation(false)} 
+      <Toast
+        message={toastMessage}
+        type={inCart ? "success" : "success"}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
       />
     </>
   );

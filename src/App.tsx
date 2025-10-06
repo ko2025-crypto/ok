@@ -10,6 +10,7 @@ import { Anime } from './pages/Anime';
 import { SearchPage } from './pages/Search';
 import { MovieDetail } from './pages/MovieDetail';
 import { TVDetail } from './pages/TVDetail';
+import { NovelDetail } from './pages/NovelDetail';
 import { Cart } from './pages/Cart';
 import { AdminPanel } from './pages/AdminPanel';
 
@@ -118,6 +119,7 @@ function App() {
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/movie/:id" element={<MovieDetail />} />
                       <Route path="/tv/:id" element={<TVDetail />} />
+                      <Route path="/novel/:id" element={<NovelDetail />} />
                       <Route path="/cart" element={<Cart />} />
                     </Routes>
                   </main>

@@ -29,6 +29,8 @@ export interface TVShow {
   adult: boolean;
   original_language: string;
   popularity: number;
+  number_of_episodes?: number;
+  number_of_episodes?: number;
 }
 
 export interface MovieDetails extends Movie {
@@ -138,6 +140,25 @@ export interface CartItem {
   original_language?: string;
   genre_ids?: number[];
 }
+
+export interface NovelCartItem {
+  id: number;
+  title: string;
+  type: 'novel';
+  genre: string;
+  chapters: number;
+  year: number;
+  description?: string;
+  country?: string;
+  status?: 'transmision' | 'finalizada';
+  image?: string;
+  paymentType: 'cash' | 'transfer';
+  pricePerChapter: number;
+  totalPrice: number;
+  poster_path?: string | null; // For compatibility with search
+}
+
+export type AllCartItems = CartItem | NovelCartItem;
 
 export interface APIResponse<T> {
   page: number;
