@@ -1,7 +1,7 @@
 import { toast } from 'react-toastify';
 import { v4 as uuid } from 'uuid';
 import {
-  ALL_STATES,
+  ALL_PROVINCES_CUBA,
   ToastType,
   CUSTOM_TOASTID,
   ITEMS_PER_PAGE,
@@ -111,12 +111,11 @@ export const Popper = () => {
 export const giveRandomData = () => {
   return {
     username: faker.person.fullName(),
-    pincode: faker.location.zipCode('######'),
     mobile: faker.phone.number('##########'),
     alternate: faker.phone.number('##########'),
     addressInfo: faker.location.streetAddress(true),
     city: faker.location.city(),
-    state: ALL_STATES[Math.floor(Math.random() * ALL_STATES.length)],
+    province: ALL_PROVINCES_CUBA[Math.floor(Math.random() * ALL_PROVINCES_CUBA.length)],
   };
 };
 
