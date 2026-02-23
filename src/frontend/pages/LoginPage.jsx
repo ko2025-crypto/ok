@@ -7,11 +7,12 @@ import {
 } from '../components';
 import {
   TEST_USER,
+  GUEST_USERS,
   ToastType,
   LOCAL_STORAGE_KEYS,
   LOGIN_CLICK_TYPE,
 } from '../constants/constants';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { loginUserService } from '../Services/services';
 import { setIntoLocalStorage, toastHandler } from '../utils/utils';
 
@@ -30,10 +31,19 @@ const LoginPage = () => {
   };
   const [userInputs, setUserInputs] = useState(initialLoginState);
   const [activeBtnLoader, setActiveBtnLoader] = useState('');
+  const [showGuestOptions, setShowGuestOptions] = useState(false);
   const locationOfLogin = useLocation();
 
   const handleUserInput = (e) => {
     setUserInputs({ ...userInputs, [e.target.name]: e.target.value });
+  };
+
+  const handleGuestUserSelect = (guestUser) => {
+    setUserInputs({
+      email: guestUser.email,
+      password: guestUser.password
+    });
+    setShowGuestOptions(false);
   };
 
   // used for both the buttons
@@ -42,6 +52,19 @@ const LoginPage = () => {
 
     const isGuestClick = clickType === LOGIN_CLICK_TYPE.GuestClick;
     const userInfo = isGuestClick ? TEST_USER : userInputs;
+
+    // Validar campos antes de enviar
+    if (!userInfo.email.trim() || !userInfo.password.trim()) {
+      toastHandler(ToastType.Error, 'Please fill in all fields');
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userInfo.email)) {
+      toastHandler(ToastType.Error, 'Please enter a valid email address');
+      return;
+    }
 
     setActiveBtnLoader(clickType);
 
@@ -67,8 +90,9 @@ const LoginPage = () => {
       // if non-registered user comes from typing '/login' at the url, after success redirect it to '/'
       navigate(locationOfLogin?.state?.from ?? '/');
     } catch ({ response }) {
-      const errorText = response?.data?.errors[0].split('.')[0];
+      const errorText = response?.data?.errors?.[0] || 'Login failed. Please try again.';
       toastHandler(ToastType.Error, errorText);
+      console.error('Login error:', response?.data);
     }
 
     setActiveBtnLoader('');
@@ -116,7 +140,43 @@ const LoginPage = () => {
           )}
         </button>
 
-        {/* this Guest Login button is out of the form  */}
+        {/* Botón para mostrar opciones de usuarios invitados */}
+        <button
+          type='button'
+          disabled={!!activeBtnLoader}
+          className='btn btn-hipster btn-block'
+          onClick={() => setShowGuestOptions(!showGuestOptions)}
+        >
+          {showGuestOptions ? 'Hide Guest Options' : 'Show Guest Login Options'}
+        </button>
+
+        {/* Opciones de usuarios invitados */}
+        {showGuestOptions && (
+          <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '0.25rem' }}>
+            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#666' }}>
+              Select a guest account to login:
+            </p>
+            {GUEST_USERS.map((guestUser, index) => (
+              <button
+                key={index}
+                type='button'
+                disabled={!!activeBtnLoader}
+                className='btn btn-success'
+                style={{ 
+                  width: '100%', 
+                  marginBottom: '0.5rem', 
+                  fontSize: '0.85rem',
+                  padding: '0.5rem'
+                }}
+                onClick={() => handleGuestUserSelect(guestUser)}
+              >
+                {guestUser.firstName} {guestUser.lastName} ({guestUser.email})
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Botón de login como invitado original */}
         <button
           disabled={!!activeBtnLoader}
           className='btn btn-block'
@@ -125,7 +185,7 @@ const LoginPage = () => {
           {activeBtnLoader === LOGIN_CLICK_TYPE.GuestClick ? (
             <span className='loader-2'></span>
           ) : (
-            'Login as a guest'
+            'Quick Guest Login (Jethalal)'
           )}
         </button>
       </form>

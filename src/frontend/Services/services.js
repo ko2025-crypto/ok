@@ -1,34 +1,44 @@
 import axios from 'axios';
 
 export const loginUserService = async (userData) => {
-  const response = await axios.post('/api/auth/login', {
-    // email, password
-    ...userData,
-  });
+  try {
+    const response = await axios.post('/api/auth/login', {
+      // email, password
+      ...userData,
+    });
 
-  if (response.status === 200 || response.status === 201) {
-    const { encodedToken, foundUser } = response.data;
+    if (response.status === 200 || response.status === 201) {
+      const { encodedToken, foundUser } = response.data;
 
-    return {
-      user: foundUser,
-      token: encodedToken,
-    };
+      return {
+        user: foundUser,
+        token: encodedToken,
+      };
+    }
+  } catch (error) {
+    console.error('Login service error:', error.response?.data);
+    throw error;
   }
 };
 
 export const signupService = async (userData) => {
-  const response = await axios.post('/api/auth/signup', {
-    // email, password, firstName, lastName
-    ...userData,
-  });
+  try {
+    const response = await axios.post('/api/auth/signup', {
+      // email, password, firstName, lastName
+      ...userData,
+    });
 
-  if (response.status === 200 || response.status === 201) {
-    const { encodedToken, createdUser } = response.data;
+    if (response.status === 200 || response.status === 201) {
+      const { encodedToken, createdUser } = response.data;
 
-    return {
-      user: createdUser,
-      token: encodedToken,
-    };
+      return {
+        user: createdUser,
+        token: encodedToken,
+      };
+    }
+  } catch (error) {
+    console.error('Signup service error:', error.response?.data);
+    throw error;
   }
 };
 

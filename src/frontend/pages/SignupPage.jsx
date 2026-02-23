@@ -7,9 +7,10 @@ import {
 } from '../components';
 import { useFormInput, useNavigateIfRegistered } from '../hooks';
 import { toastHandler } from '../utils/utils';
-import { ToastType } from '../constants/constants';
+import { ToastType, LOCAL_STORAGE_KEYS } from '../constants/constants';
 import { useState } from 'react';
 import { signupService } from '../Services/services';
+import { setIntoLocalStorage } from '../utils/utils';
 import { useAuthContext } from '../contexts/AuthContextProvider';
 
 const SignupPage = () => {
@@ -32,16 +33,40 @@ const SignupPage = () => {
   const handleCreateAccount = async (e) => {
     e.preventDefault();
 
+    // Validar que todos los campos requeridos estén llenos
+    if (!userInputs.firstName.trim()) {
+      toastHandler(ToastType.Error, 'First name is required');
+      return;
+    }
+
+    if (!userInputs.email.trim()) {
+      toastHandler(ToastType.Error, 'Email is required');
+      return;
+    }
+
+    if (!userInputs.passwordMain.trim()) {
+      toastHandler(ToastType.Error, 'Password is required');
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userInputs.email)) {
+      toastHandler(ToastType.Error, 'Please enter a valid email address');
+      return;
+    }
+
+    // Validar longitud de contraseña
+    if (userInputs.passwordMain.length < 3) {
+      toastHandler(ToastType.Error, 'Password must be at least 3 characters long');
+      return;
+    }
+
     if (userInputs.passwordMain !== userInputs.passwordConfirm) {
       toastHandler(
         ToastType.Error,
         'Password and Confirm Password inputs did not match!'
       );
-      return;
-    }
-
-    if (!userInputs.firstName.trim()) {
-      toastHandler(ToastType.Error, 'Please fill all the inputs');
       return;
     }
 
@@ -60,14 +85,19 @@ const SignupPage = () => {
       // update AuthContext with data
       updateUserAuth({ user, token });
 
+      // store this data in localStorage
+      setIntoLocalStorage(LOCAL_STORAGE_KEYS.User, user);
+      setIntoLocalStorage(LOCAL_STORAGE_KEYS.Token, token);
+
       // show success toast
-      toastHandler(ToastType.Success, `Sign up successful`);
+      toastHandler(ToastType.Success, `Welcome ${user.firstName}! Account created successfully`);
 
       // if user directly comes to '/signup' from url, so state will be null, after successful registration, user should be directed to home page
       navigate(signupPageLocation?.state?.from ?? '/');
     } catch (error) {
-      toastHandler(ToastType.Error, error.response.data.errors[0]);
-      console.error(error.response);
+      const errorMessage = error.response?.data?.errors?.[0] || 'Signup failed. Please try again.';
+      toastHandler(ToastType.Error, errorMessage);
+      console.error('Signup error:', error.response?.data);
     }
 
     setIsSignupFormLoading(false);

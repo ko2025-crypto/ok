@@ -40,6 +40,33 @@ export const TEST_USER = {
   password: 'babitaji1234',
 };
 
+export const GUEST_USERS = [
+  {
+    email: 'jethalal.gada@gmail.com',
+    password: 'babitaji1234',
+    firstName: 'Jethalal',
+    lastName: 'Gada'
+  },
+  {
+    email: 'usuario@gmail.com',
+    password: '123456',
+    firstName: 'Usuario',
+    lastName: 'Invitado'
+  },
+  {
+    email: 'test@hotmail.com',
+    password: 'password',
+    firstName: 'Test',
+    lastName: 'User'
+  },
+  {
+    email: 'demo@yahoo.com',
+    password: 'demo123',
+    firstName: 'Demo',
+    lastName: 'User'
+  }
+];
+
 export const LOCAL_STORAGE_KEYS = {
   User: 'user',
   Token: 'token',
