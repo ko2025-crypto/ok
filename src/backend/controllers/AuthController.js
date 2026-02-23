@@ -2,6 +2,7 @@ import { v4 as uuid } from "uuid";
 import { Response } from "miragejs";
 import { formatDate } from "../utils/authUtils";
 import { GUEST_USERS } from "../../frontend/constants/constants";
+import { JWT_SECRET } from "../../frontend/constants/constants";
 const sign = require("jwt-encode");
 /**
  * All the routes related to Auth are present here.
@@ -93,7 +94,7 @@ export const signupHandler = function (schema, request) {
       wishlist: [],
     };
     const createdUser = schema.users.create(newUser);
-    const encodedToken = sign({ _id, email }, process.env.REACT_APP_JWT_SECRET);
+    const encodedToken = sign({ _id, email }, JWT_SECRET);
     return new Response(201, {}, { createdUser, encodedToken });
   } catch (error) {
     console.error('Signup error:', error);
@@ -159,7 +160,7 @@ export const loginHandler = function (schema, request) {
         };
         
         const createdUser = schema.users.create(newGuestUser);
-        const encodedToken = sign({ _id, email: email.toLowerCase().trim() }, process.env.REACT_APP_JWT_SECRET);
+        const encodedToken = sign({ _id, email: email.toLowerCase().trim() }, JWT_SECRET);
         
         // Remover password del objeto de respuesta
         const userResponse = { ...createdUser.attrs };
@@ -178,7 +179,7 @@ export const loginHandler = function (schema, request) {
     if (password.trim() === foundUser.password) {
       const encodedToken = sign(
         { _id: foundUser._id, email: foundUser.email },
-        process.env.REACT_APP_JWT_SECRET
+        JWT_SECRET
       );
       
       // Crear copia del usuario sin la contraseña

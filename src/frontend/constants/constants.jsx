@@ -180,3 +180,5 @@ export const CHARGE_AND_DISCOUNT = {
 export const MIN_DISTANCE_BETWEEN_THUMBS = 1000;
 
 export const MAX_RESPONSES_IN_CACHE_TO_STORE = 50;
+
+export const JWT_SECRET = 'Jai Radha Madhav';
