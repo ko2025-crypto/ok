@@ -1,5 +1,4 @@
 import { ALL_STATES, ToastType } from '../../constants/constants';
-import { ALL_PROVINCES_CUBA, ToastType } from '../../constants/constants';
 
 import { useAllProductsContext } from '../../contexts/ProductsContextProvider';
 
@@ -27,8 +26,9 @@ const AddressForm = ({ isAdding, isEditingAndData = null, closeForm }) => {
     mobile: '',
     alternate: '',
     addressInfo: '',
+    pincode: '',
     city: '',
-    province: '',
+    state: '',
   };
 
   const [inputs, setInputs] = useState(
@@ -113,6 +113,15 @@ const AddressForm = ({ isAdding, isEditingAndData = null, closeForm }) => {
         handleChange={handleInputChange}
       />
 
+      <FormRow
+        text='Pincode'
+        type='number'
+        name='pincode'
+        id='pincode'
+        placeholder='pincode'
+        value={inputs.pincode}
+        handleChange={handleInputChange}
+      />
 
       <FormRow
         text='City'
@@ -151,22 +160,22 @@ const AddressForm = ({ isAdding, isEditingAndData = null, closeForm }) => {
       </div>
 
       <div>
-        <label htmlFor='province'>Province</label>
+        <label htmlFor='state'>State</label>
         <select
           className='form-select'
-          name='province'
-          id='province'
+          name='state'
+          id='state'
           onChange={handleInputChange}
-          value={inputs.province}
+          value={inputs.state}
           required
         >
-          <option id='province' value='' disabled>
-            Choose Province:
+          <option id='state' value='' disabled>
+            Choose State:
           </option>
 
-          {ALL_PROVINCES_CUBA.map((singleProvince, index) => (
-            <option key={index} id='province' value={singleProvince}>
-              {singleProvince}
+          {ALL_STATES.map((singleState, index) => (
+            <option key={index} id='state' value={singleState}>
+              {singleState}
             </option>
           ))}
         </select>
