@@ -6,16 +6,24 @@ import styles from './FeaturedProducts.module.css';
 const FeaturedProducts = () => {
   const { products: productsFromContext } = useAllProductsContext();
 
-  const featuredProductsList = productsFromContext.filter(
-    (product) => product?.featured
+  // Primero obtener productos nuevos, luego los destacados
+  const newProductsList = productsFromContext.filter(
+    (product) => product?.isNew
   );
+  
+  const featuredProductsList = productsFromContext.filter(
+    (product) => product?.featured && !product?.isNew
+  );
+  
+  // Combinar productos nuevos al inicio, luego los destacados
+  const displayProducts = [...newProductsList, ...featuredProductsList];
 
   return (
     <section className='section'>
       <Title>Featured Products</Title>
 
       <div className={`container ${styles.featuredCenter}`}>
-        {featuredProductsList.map((singleProduct) => (
+        {displayProducts.map((singleProduct) => (
           <ProductCard key={singleProduct._id} product={singleProduct} />
         ))}
       </div>

@@ -131,6 +131,8 @@ const ProductCard = ({ product }) => {
           : `${styles.productStyle} ${styles.disabledProduct}`
       }
     >
+      {product.isNew && <div className={styles.newBadge}>Nuevo</div>}
+      
       <div className={styles.imgContainer}>
         <Link to={`/products/${product._id}`}>
           <img src={product.image} alt={product.name} />

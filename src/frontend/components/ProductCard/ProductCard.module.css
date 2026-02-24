@@ -13,6 +13,35 @@
   box-shadow: var(--shadow-4);
 }
 
+.newBadge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+  color: var(--white);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--borderRadius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 3;
+  box-shadow: var(--shadow-2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .disabledProduct::before {
   content: 'Out of Stock';
   position: absolute;

@@ -32,6 +32,19 @@
   margin-bottom: 1.5rem;
 }
 
+.newBadge {
+  display: inline-block;
+  background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+  color: var(--white);
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-2);
+  animation: pulse 2s infinite;
+}
+
 .userReview {
   display: flex;
   align-items: center;

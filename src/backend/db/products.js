@@ -178,6 +178,7 @@ export const products = [
     price: 2280,
     originalPrice: 7999,
     featured: true,
+    isNew: true,
     image:
       'https://res.cloudinary.com/dtbd1y4en/image/upload/v1683909641/mi-watch-2-lite_ofbl7m.jpg',
     colors: [
@@ -441,6 +442,7 @@ export const products = [
     price: 110899,
     originalPrice: 120999,
     featured: true,
+    isNew: true,
     image:
       'https://res.cloudinary.com/dtbd1y4en/image/upload/v1683910482/apple-air-2023_b59fdw.jpg',
     colors: [
@@ -1188,6 +1190,7 @@ export const products = [
     price: 61999,
     originalPrice: 61999,
     featured: true,
+    isNew: true,
     image:
       'https://res.cloudinary.com/dtbd1y4en/image/upload/v1683957584/oneplus-11_jzzby3.jpg',
     colors: [

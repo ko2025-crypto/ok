@@ -164,6 +164,11 @@ const SingleProductPage = () => {
 
       <div className={styles.productContent}>
         <h3 className='primary-color-text'>{name}</h3>
+        {singleProductData.isNew && (
+          <div className={styles.newBadge}>
+            ✨ ¡Producto Nuevo!
+          </div>
+        )}
         <div className={styles.userReview}>
           <span className={styles.rating}>
             {stars} <AiFillStar />
