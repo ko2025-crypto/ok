@@ -141,6 +141,25 @@ export const ALL_STATES = [
   'Puducherry',
 ];
 
+export const ALL_PROVINCES_CUBA = [
+  'Pinar del Río',
+  'Artemisa',
+  'La Habana',
+  'Mayabeque',
+  'Matanzas',
+  'Cienfuegos',
+  'Villa Clara',
+  'Sancti Spíritus',
+  'Ciego de Ávila',
+  'Camagüey',
+  'Las Tunas',
+  'Holguín',
+  'Granma',
+  'Santiago de Cuba',
+  'Guantánamo',
+  'Isla de la Juventud',
+];
+
 export const COUPONS = [
   {
     id: uuid(),

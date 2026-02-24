@@ -29,7 +29,6 @@ const AuthContextProvider = ({ children }) => {
         wishlist: [],
       });
     }
-  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, updateUserAuth }}>

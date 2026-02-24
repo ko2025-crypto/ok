@@ -5,7 +5,7 @@ const CheckoutAddressCard = ({
   activeAddressId,
   handleSelect,
 }) => {
-  const { addressId, username, city, state, pincode, addressInfo, mobile } =
+  const { addressId, username, city, province, addressInfo, mobile } =
     singleAddress;
 
   const isActiveAddress = addressId === activeAddressId;
@@ -20,7 +20,7 @@ const CheckoutAddressCard = ({
       <label htmlFor={addressId}>
         <h4 className='bold'>{username}</h4>
         <p>
-          {addressInfo}, {city}, {state}, Pincode - {pincode}
+          {addressInfo}, {province}
         </p>
         <p>
           {' '}

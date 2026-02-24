@@ -11,9 +11,7 @@ const AddressCard = ({
     mobile,
     alternate,
     addressInfo,
-    pincode,
-    city,
-    state,
+    province,
   } = singleAddress;
 
   const { deleteAddressDispatch, timedMainPageLoader } =
@@ -33,12 +31,7 @@ const AddressCard = ({
       </div>
 
       <p>{addressInfo}</p>
-      <p>{pincode}</p>
-
-      <div className={styles.row}>
-        <span>{city}</span>
-        <span>{state}</span>
-      </div>
+      <p>{province}</p>
 
       <div className='btn-container'>
         <button

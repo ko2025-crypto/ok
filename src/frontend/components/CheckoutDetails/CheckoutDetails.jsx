@@ -94,12 +94,6 @@ const CheckoutDetails = ({
           'https://res.cloudinary.com/dtbd1y4en/image/upload/v1685641105/apple-touch-icon_edbdny.png',
 
         handler: async (response) => {
-          const tempObj = {
-            products: [...cartFromContext],
-            amount: finalPriceToPay,
-            paymentId: response.razorpay_payment_id,
-          };
-
           await clearCartDispatch();
           updateCheckoutStatus({ showSuccessMsg: true });
 

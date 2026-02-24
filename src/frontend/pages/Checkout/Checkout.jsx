@@ -29,7 +29,6 @@ const Checkout = () => {
     if (isCartEmpty && !isCheckoutSuccess) {
       navigate('/products');
     }
-  }, [isCartEmpty]);
 
   useEffect(() => {
     return () => {
